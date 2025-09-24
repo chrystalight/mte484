@@ -83,27 +83,38 @@ void setup() {
 
 // ================== Loop ==================
 void loop() {
-  
+  if (Serial.available() > 0) {
+    float targetVoltage = Serial.parseFloat();
+    if (targetVoltage > 6.0){
+      Serial.println("No absolutely not");
+    }
+    setMotorVoltage(targetVoltage);
+    Serial.print("Voltage set to: ");
+    Serial.println(targetVoltage);
+
+    while(Serial.available() > 0) {
+      Serial.read();
+    }
+  }
 }
 
-
 // ================== Control ISR ==================
+// This function runs every 100ms automatically
 void interval_control_code(void) {
-  // ---- Read sensors ----
-  int motor = analogRead(MOT_PIN);
-  int ball  = analogRead(BAL_PIN);
-
-  digitalWrite(A5,HIGH);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
-  //Serial.print(ball);
-  //Serial.print(",");
-  Serial.print(motor);
-  Serial.print(", ");
-  Serial.print(map_potentiometer(motor));
-  Serial.print(", ");
-  Serial.print(m);
-  Serial.print(" ");
-  Serial.println(offset);
-  digitalWrite(A5,LOW);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
+  // Read the motor's raw sensor value
+  int motor_raw = analogRead(MOT_PIN);
   
+  // Convert the raw value to radians
+  double motor_angle_rad = map_potentiometer(motor_raw);
 
+  // Optional: Convert radians to degrees for easier reading
+  double motor_angle_deg = motor_angle_rad * 180.0 / M_PI;
+
+  // Print the current angle to the serial monitor
+  Serial.print("Current Angle (deg): ");
+  Serial.println(motor_angle_deg);
+  
+  // Note: The original print statements from your code can be removed from here
+  // to avoid cluttering the serial monitor during the test.
+}
 }
