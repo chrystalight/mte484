@@ -70,14 +70,15 @@ void setup() {
 
   pinMode(A5, OUTPUT);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
   Serial.begin(115200);
-  delay(300);
+  delay(1000);
+  calibrate_potentiometer(); //comment out this line to use the defaults
+
 
   geeWhizBegin();                 
-  set_control_interval_ms(100); // 100 ms loop
+  set_control_interval_ms(1000); // 100 ms loop
   setMotorVoltage(0.0f);
 
   Serial.println("geeWhiz Started");
-  calibrate_potentiometer(); //comment out this line to use the defaults
 
 }
 
