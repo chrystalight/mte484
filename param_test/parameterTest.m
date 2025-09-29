@@ -29,17 +29,21 @@
 % legend('-5V', '-4V', '-3V', '-2V', '-1V', ...
 %     '+1V', '+2V', '+3V', '+4V', '+5V')
 
-for ref = -5 : 1 : 5+1
+% Export to the graphing-484-data script's format
+
+for ref = -5 : 1 : 5
     if ref == 0
         continue
     end
     condition = all([allData.Reference == ref, abs(allData.AngleRad) < pi], 2);
     data = allData(condition,:);
-    data.Properties.VariableNames = ["T", "U", "Y", "Raw"];
+    T = data.Time;
+    U = data.Reference;
+    Y = data.AngleRad;
     % data = renamevars(data, ['AngleRad', 'Reference', 'Time'], ['Y', 'U', 'T']);
     % x = data.Time;
     % y = unwrap(data.AngleRad);
     % plot(x, y);
-    save(sprintf('step_input_%d.mat', ref), 'data')
+    save(sprintf('step_input_%d.mat', ref), 'T', 'U', 'Y', 'data')
 end
 
