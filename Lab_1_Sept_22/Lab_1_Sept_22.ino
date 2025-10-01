@@ -1,6 +1,11 @@
 #include <Arduino.h>
 #include "geeWhiz.h"
 
+// =============== Control System Parameters
+float T = 1.4; //sampling time in MS
+float U = 5.0; //reference signal, WILL BE OVERWRITTEN BY USER INPUT
+int max_T = 5000;
+volatile int i = 0;
 // ================== Pins ==================
 int MOT_PIN = A0;   // motor angle sensor
 int BAL_PIN = A1;   // ball position sensor
@@ -65,18 +70,34 @@ void calibrate_potentiometer(){
   Serial.println(offset, 6);
 }
   
-// ================== Setup ==================
+// ================== MODIFIED Setup ==================
 void setup() {
 
-  pinMode(A5, OUTPUT);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
+  pinMode(A5, OUTPUT);
   Serial.begin(115200);
   delay(1000);
-  calibrate_potentiometer(); //comment out this line to use the defaults
+  //calibrate_potentiometer(); //comment out this line to use the defaults
 
+  // Wait for user to input a value for R
+  Serial.println("Please enter a value for the step input (R) and press Enter:");
+  while (Serial.available() == 0) {
+    delay(50); // Wait patiently for input
+  }
 
+  // Read the floating point number and set it as our reference signal R
+  R = Serial.parseFloat();
+  Serial.println("==============================================================================");
+  Serial.print("STEP INPUT VAL (R): ");
+  Serial.println(R);
+  Serial.print("SAMPLING TIME VAL (T): ");
+  Serial.println(T);
+  Serial.println("==============================================================================");
+  Serial.println("T, U, Y, H");
+
+  // Now, continue with the rest of the setup
   geeWhizBegin();                 
-  set_control_interval_ms(1000); // 100 ms loop
-  setMotorVoltage(0.0f);
+  set_control_interval_ms(T); // Set the sampling time from the global variable
+  setMotorVoltage(0);
 
   Serial.println("geeWhiz Started");
 
@@ -84,27 +105,30 @@ void setup() {
 
 // ================== Loop ==================
 void loop() {
-  
+  // The main loop is empty as all work is done in the timer interrupt (ISR)
 }
 
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
-  // ---- Read sensors ----
+  // This function runs automatically every 'T' milliseconds
+  // Stop the test after the max time has elapsed
+  if (T * i > max_T) {
+    setMotorVoltage(0); // Turn off the motor
+    return; // Do nothing further
+  }
+
+  //Serial.print(micros());
+  // ---- Read sensors and apply step input ----
   int motor = analogRead(MOT_PIN);
-  int ball  = analogRead(BAL_PIN);
-
-  digitalWrite(A5,HIGH);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
-  //Serial.print(ball);
-  //Serial.print(",");
+  setMotorVoltage(U); // Apply the constant step input voltage
+  // ---- Print data in CSV format ----
+  Serial.print(T);
+  Serial.print(",");
+  Serial.print(U);
+  Serial.print(","); // Print angle in radians with 5 decimal places
+  Serial.print(map_potentiometer(motor), 5);
+  Serial.print(", ");
   Serial.print(motor);
-  Serial.print(", ");
-  Serial.print(map_potentiometer(motor));
-  Serial.print(", ");
-  Serial.print(m);
-  Serial.print(" ");
-  Serial.println(offset);
-  digitalWrite(A5,LOW);   // A5 can be used to measure cycle time using an oscilloscope by connecting the scope to the Arduino Box Motor Leads
-  
-
+  i+=1;
 }
