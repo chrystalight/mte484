@@ -8,20 +8,20 @@
 //MAKE SURE INPUT MODE AND SATURATOR ACTIVE ARE SET CORRECTLY -- INPUT MODE 1 WILL BE WHAT YOU WANT
 
 // =============== System and Control Parameters ===============
-int T = 3;                                  // Sampling time in MS
-float Kp = -19.2928;                        // Proportional gain for each calculated zeta
-// float Kp = -3.3494;
-// float Kp = -4.8232;
+int T = 250;                                  // Sampling time in MS
+// float Kp = -19.2928;                        // Proportional gain for each calculated zeta
 // float Kp = -9.6483;
+float Kp = -4.8232;
+// float Kp = -3.3494;
 float stiction_offset_neg = -0.202;
 float stiction_offset_pos = 0.236;
-int max_T = 10000;                          // Test duration in MS
+int max_T = 5000;                          // Test duration in MS
 
 // --- Input Parameters ---
-float frequency_hz;                   // Default for sine wave mode
+float frequency_hz;                         // Default for sine wave mode
 const float amplitude_rad = M_PI / 8.0;
-float step_magnitude_rad;             // Default for step input mode
-float open_loop_voltage;              // Default for open-loop mode
+float step_magnitude_rad;                   // Default for step input mode
+float open_loop_voltage;                    // Default for open-loop mode
 
 // --- Saturator Limits ---
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
@@ -43,6 +43,10 @@ enum ProgramState { WAIT_FOR_INPUT, RUNNING_TEST, TEST_COMPLETE };
 volatile ProgramState currentState = WAIT_FOR_INPUT;
 
 volatile int i = 0;
+volatile double target_angle = -1;
+double trial_value = -1; //mode-dependent, eg. step magnitude
+
+volatile int trial_num = 1; // 1-indexed because matlab
 
 //=================== Potentiometer Calibration ====
 int pot_min = 565;
@@ -101,18 +105,22 @@ void loop() {
         Serial.println(" V");
       } else if (input_mode == 1) {
         step_magnitude_rad = userInput;
+        trial_value = step_magnitude_rad;
+        double current_angle = map_potentiometer(analogRead(MOT_PIN)); 
+        target_angle = current_angle + step_magnitude_rad;
         Serial.print("NEW TEST STARTED -> STEP MAGNITUDE: ");
         Serial.print(step_magnitude_rad, 4);
         Serial.println(" rad");
       } else if (input_mode == 2) {
         frequency_hz = userInput;
+        trial_value = frequency_hz;
         Serial.print("NEW TEST STARTED -> SINE WAVE FREQUENCY: ");
         Serial.print(frequency_hz, 2);
         Serial.println(" Hz");
       }
 
       Serial.println("==============================================================================");
-      Serial.println("Time (ms),Original Ref (V or rad),Final Ref (V or rad),Angle (rad),Raw Sensor");
+      Serial.println("Time (ms),Original Ref (V or rad),Final Ref (V or rad),Angle (rad),TrialCount,TrialValue,Raw Sensor");
       
       i = 0;
       currentState = RUNNING_TEST;
@@ -121,6 +129,7 @@ void loop() {
   } else if (currentState == TEST_COMPLETE) {
     Serial.println("==============================================================================");
     Serial.println("Test complete.");
+    trial_num += 1;
     
     if (input_mode == 0) {
         Serial.println("\nPlease enter a new voltage to run another test:");
@@ -159,14 +168,16 @@ void interval_control_code(void) {
     U = open_loop_voltage;
     original_ref = U; // Log the commanded voltage for reference
     final_ref = U;    // Log the commanded voltage for reference
-  } else {
+  } 
+  else {
 
     // Modes 1 & 2: Closed-loop control.
 
     // --- Generate the reference signal based on the selected mode ---
     if (input_mode == 1) {
-      original_ref = step_magnitude_rad;
-    } else { // input_mode == 2, calculate sin wave
+      original_ref = target_angle;
+    } 
+    else { // input_mode == 2, calculate sin wave
       float current_time_s = (float)(T * i) / 1000.0;
       original_ref = amplitude_rad * sin(2.0 * M_PI * frequency_hz * current_time_s);
     }
@@ -202,6 +213,10 @@ void interval_control_code(void) {
   Serial.print(final_ref, 5);
   Serial.print(",");
   Serial.print(current_angle, 5);
+  Serial.print(",");
+  Serial.print(trial_num);
+  Serial.print(",");
+  Serial.print(trial_value);
   Serial.print(",");
   Serial.println(motor_raw);
   
