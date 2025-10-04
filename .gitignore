@@ -1,1 +1,13 @@
 *.asv
+param_test/Graphing-484-data.mlx
+param_test/parameterTest.m
+param_test/step_input_-1.mat
+param_test/step_input_-2.mat
+param_test/step_input_-3.mat
+param_test/step_input_-4.mat
+param_test/step_input_-5.mat
+param_test/step_input_1.mat
+param_test/step_input_2.mat
+param_test/step_input_3.mat
+param_test/step_input_4.mat
+param_test/step_input_5.mat

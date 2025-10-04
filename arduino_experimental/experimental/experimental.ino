@@ -2,9 +2,9 @@
 #include "geeWhiz.h"
 
 // =============== Control System Parameters
-int T = 10; //sampling time in MS
+int T = 3; //sampling time in MS
 float U = 5.0; //reference signal, will be overwritten
-int max_T = 5000;
+int max_T = 3000;
 
 // NEW: State machine to control the program flow
 enum ProgramState { WAIT_FOR_INPUT, RUNNING_TEST, TEST_COMPLETE };
