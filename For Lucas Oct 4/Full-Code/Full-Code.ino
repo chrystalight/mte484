@@ -31,8 +31,8 @@ const float saturation_limit = 0.7;         // The limit for the reference signa
 // 0 --> Open-loop control. 
 // 1 --> Step input mode.
 // 2 --> Sine wave tracking mode. 
-int input_mode = 0;
-bool saturator_active = true;
+int input_mode = 1;
+bool saturator_active = false;
 
 // ================== Pins ==================
 int MOT_PIN = A0;   // motor angle sensor
