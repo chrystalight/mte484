@@ -17,19 +17,19 @@ end
 allData = allData(validRows,:);
 referenceVals = unique(allData.Reference);
 
-%% Plot data
-% figure
-% title('1ms Data')
-% hold on;
-% for ref = -5 : 1 : 5+1
-%     condition = all([allData.Reference == ref, abs(allData.AngleRad) < pi], 2);
-%     data = allData(condition,:);
-%     x = data.Time;
-%     y = unwrap(data.AngleRad);
-%     plot(x, y);
-% end
-% legend('-5V', '-4V', '-3V', '-2V', '-1V', ...
-%     '+1V', '+2V', '+3V', '+4V', '+5V')
+% Plot data
+figure
+title('1ms Data')
+hold on;
+for ref = -5 : 1 : 5+1
+    condition = all([allData.Reference == ref, abs(allData.AngleRad) < pi], 2);
+    data = allData(condition,:);
+    x = data.Time;
+    y = unwrap(data.AngleRad);
+    plot(x, y);
+end
+legend('-5V', '-4V', '-3V', '-2V', '-1V', ...
+    '+1V', '+2V', '+3V', '+4V', '+5V')
 
 %% Export to the graphing-484-data script's format
 for ref = -5 : 1 : 5

@@ -6,9 +6,15 @@
 //SAME FOR T
 
 //MAKE SURE INPUT MODE AND SATURATOR ACTIVE ARE SET CORRECTLY -- INPUT MODE 1 WILL BE WHAT YOU WANT
+//===========NEW LUCAS LOOK HERE!!! ===========
+float rad_mag[] = {M_PI/8, -M_PI/8, M_PI/4, -M_PI/4};
+int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
+int step_index = 0;
+bool autostep = true;
+
 
 // =============== System and Control Parameters ===============
-int T = 250;                                  // Sampling time in MS
+int T = 5;                                  // Sampling time in MS
 // float Kp = -19.2928;                        // Proportional gain for each calculated zeta
 // float Kp = -9.6483;
 float Kp = -4.8232;
@@ -80,7 +86,14 @@ void setup() {
     Serial.println("\nPlease enter a MOTOR VOLTAGE (Vin) and press Enter:");
   } else if (input_mode == 1) {
     Serial.println("Mode: STEP INPUT");
-    Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
+    if(autostep){
+      Serial.println("Mode: STEP INPUT (AUTOMATED)");
+      // --- MODIFICATION: Changed the initial prompt ---
+      Serial.println("\nPress any character and Enter to start the first step trial:");
+    }
+    else{
+      Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
+    }
   } else if (input_mode == 2) {
     Serial.println("Mode: SINE WAVE TRACKING");
     Serial.println("\nPlease enter a SINE WAVE FREQUENCY (in Hz) and press Enter:");
@@ -104,7 +117,13 @@ void loop() {
         Serial.print(open_loop_voltage, 4);
         Serial.println(" V");
       } else if (input_mode == 1) {
-        step_magnitude_rad = userInput;
+        if(autostep){
+          step_magnitude_rad = rad_mag[step_index];
+        }
+        else{
+          step_magnitude_rad = userInput;
+        }
+
         trial_value = step_magnitude_rad;
         double current_angle = map_potentiometer(analogRead(MOT_PIN)); 
         target_angle = current_angle + step_magnitude_rad;
@@ -134,6 +153,16 @@ void loop() {
     if (input_mode == 0) {
         Serial.println("\nPlease enter a new voltage to run another test:");
     } else if (input_mode == 1) {
+      if(autostep){
+        step_index++;
+        if (step_index < num_steps) {
+            Serial.println("\nInput a character and enter to run the next one");
+        } else {
+            Serial.println("\n You're finished!!! Returning to normal operation now");
+            autostep = false;
+        }
+        currentState = WAIT_FOR_INPUT;
+      }
         Serial.println("\nPlease enter a new step magnitude to run another test:");
     } else if (input_mode == 2) {
         Serial.println("\nPlease enter a new frequency to run another test:");
