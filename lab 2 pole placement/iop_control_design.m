@@ -9,19 +9,22 @@
 cla
 
 % set time step
-T = 0.02;
+T = 0.002;
+
+PLANT_TAU = 0.028;
+PLANT_K1 = -1.853;
 
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
 
-stableRealPlantPoles = [];
-stableComplexPlantPoles = [complex(1/4, 1/4), complex(1/4, -1/4)];
-unstablePlantPoles = [-2];
+stableRealPlantPoles = [0];
+stableComplexPlantPoles = [];
+unstablePlantPoles = [-1/PLANT_TAU];
 
 stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
-cs = [complex(1, 1), complex(1, -1), 2];
+cs = [PLANT_K1, -PLANT_K1];
 
 n = length(qs);
 nhat = length(stablePlantPoles);
@@ -37,8 +40,8 @@ G;
 
 %% Poles Chosen in the Simple Pole Approximation of W[z]
 
-realWPoles = [1/4];
-complexWPoles = [complex(1/2, 1/2) complex(1/2, -1/2)];
+realWPoles = [];
+complexWPoles = [generate_poles(20, 0.9, complex(0))];
 ps = [realWPoles complexWPoles];
 
 mreal = length(realWPoles);
@@ -98,7 +101,7 @@ b = [zeros(m+size(beta,1),1);
 %% Determination of step response matrices
 
 % time horizon
-K = 500;
+K = floor(0.5/T);
 
 step_ry = zeros(K,m+nhat);
 
@@ -170,16 +173,17 @@ end
 
 %% Defining the objective function and constraints for the optimization
 
-MaxControlEffort = 4.5;
-MaxSteadyStateError = 0.01;
-MaxOvershoot = 0.5;
-MaxSettlingTime = 0.5;
+MaxControlEffort = 6;
+MaxSteadyStateError = 0;
+MaxOvershoot = 0.05;
+MaxSettlingTime = 0.25;
 
 JHat = MaxSettlingTime/T;
 
 y = step_ry * [x ; xhat];
 u = step_ru*w;
-Objective = (norm(y(1:end), 2)^2) + (norm(u(1:end), 2)^2);
+Objective = 0;
+% Objective = (norm(y(1:end), 2)^2) + (norm(u(1:end), 2)^2);
 % Objective = min(max(step_ry * [x ; xhat]));
 % Objective = norm(step_ry * [x ; xhat], 'inf');
 
