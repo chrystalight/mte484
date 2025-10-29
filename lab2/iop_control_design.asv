@@ -5,28 +5,21 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% System Parameters
+% set time step
 T = 0.004;
-k_1 = -2.0037
-tau = 0.0285
 
-
-%Pole Picking Parameters
-total = 20;
-rmax = 0.9;
-center = 0;
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
 
 j = sqrt(-1);
 stableRealPlantPoles = [0];
 stableComplexPlantPoles = [];
-unstablePlantPoles = [-1/tau]; 
+unstablePlantPoles = [-1/0.028]; 
 stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
 %cs = [1+j 1-j 2];
-cs = [k_1, -k_1];
+cs = [k1];
 
 n = length(qs);
 nhat = length(stablePlantPoles);
@@ -47,8 +40,7 @@ G
 %complexWPoles = [0.2+0.2*j 0.2-0.2*j 0.3+0.3*j 0.3-0.3*j 0.4+0.4*j 0.4-0.4*j];
 
 realWPoles = [];
-
-complexWPoles = [generate_poles(total,rmax,center)];
+complexWPoles = [0.4+0.4*j 0.4-0.4*j];
 ps = [realWPoles complexWPoles];
 
 mreal = length(realWPoles);
@@ -108,7 +100,7 @@ b = [zeros(m+size(beta,1),1);
 %% Determination of step response matrices
 
 % time horizon
-K = 250;
+K = 100;
 
 step_ry = zeros(K,m+nhat);
 
@@ -191,8 +183,8 @@ Constraints = [A*[w;x;xhat] == b];
 %               max(step_ru*w) <= 0.6];
 
 % steady state constraint
-%Constraints = [Constraints,
-%               steadyState * [x;xhat]+1 == 0];
+Constraints = [Constraints,
+               steadyState * [x;xhat]+1 == 0];
 
 % overshoot constraint
 %Constraints = [Constraints,
