@@ -19,7 +19,7 @@ G = c2d(P, T, 'zoh')
 [r, p, k] = residuez(num, den);
 
 %Pole Picking Parameters
-total = 50;
+total = 40;
 rmax = 0.9;
 center = 0;
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
@@ -53,7 +53,8 @@ G
 %complexWPoles = [0.2+0.2*j 0.2-0.2*j 0.3+0.3*j 0.3-0.3*j 0.4+0.4*j 0.4-0.4*j];
 
 realWPoles = [];
-complexWPoles = [generate_poles(total,rmax,center)];
+%complexWPoles = [generate_poles(total,rmax,center)];
+complexWPoles = pruneder_poles.'
 ps = [realWPoles complexWPoles];
 
 mreal = length(realWPoles);
@@ -122,7 +123,7 @@ for k=1:K
         step_ry(k,i) = -(1-ps(i)^k)/(1-ps(i));
     end
     for j=1:nhat
-        step_ry(k,m+j) = -(1-qs(j)^k)/(1-qs(j)); % <-- FIX: Added negative sign
+        step_ry(k,m+j) = -(1-qs(j)^k)/(1-qs(j)); 
     end
 end
 
@@ -135,8 +136,8 @@ for k=1:K
 end
 
 % verify on a simple example that step_ry and step_ru are correct!
-% step_ry = step_ry*1.4;
-% step_ru
+step_ry = step_ry*1.4;
+step_ru = step_ru*1.4;
 
 %% Determination of steady state vector
 
@@ -151,7 +152,7 @@ for k=1:nhat
 end
 
 % verify on a simple example that steadyState is correct!
-%steadyState;
+steadyState = steadyState*1.4;
 
 %% Defining the variables for the optimization
 
@@ -197,14 +198,14 @@ Constraints = [Constraints, ...
 
 % steady state constraint
 Constraints = [Constraints,
-               steadyState * [x;xhat]+1 == 0];
+               steadyState * [x;xhat]+1.4 == 0];
 
 %overshoot constraint
 Constraints = [Constraints,
                max(step_ry*[x;xhat]) <= 1.05*(-steadyState * [x;xhat])];
 
 % settling time constraint
-%jhat = 0.25/T;
+jhat = 0.25/T;
 Constraints = [Constraints,
                max(step_ry(jhat:end,:)*[x;xhat]) <= 1.02*(-steadyState * [x;xhat]),
                min(step_ry(jhat:end,:)*[x;xhat]) >= 0.98*(-steadyState * [x;xhat])];
@@ -285,21 +286,23 @@ den{1} = real(den{1});
 X = tf(num,den,T);
 
 % find the poles and zeros of W and X
-zpk(W);
-zero(W);
-pole(W);
-zpk(X);
-zero(X);
-pole(X);
+% zpk(W);
+% zero(W);
+% pole(W);
+% zpk(X);
+% zero(X);
+% pole(X);
+
+%this does the same thing as the above
+[zW,pW,kW] = zpkdata(W,'v');
+[zX,pX,kX] = zpkdata(X,'v');
+
+%D = recoverD(W, X, T, 0.001)
 
 %% Verify design in discrete time
 
 % compute D by hand
 j = sqrt(-1);
-
-% FIX 2: The lines below are for the OLD problem. They are wrong for your
-% new problem. I have commented them out.
-%
 % D = 0.43333*((z-0.4)*(z-0.5))/((z-1)*(z-0.3393)*(z+0.0393));
 %
 % TO FIX THIS:
@@ -342,4 +345,50 @@ D = W/X; % <-- This calculates D automatically. You can replace this
 %hold on;
 %step(T_ru,'g--'); % <-- Made the line a dashed green 'g--' to see it better
 %hold off;
+
+
+
+function D = recoverD(W, X, T, tol)
+%RECOVERD  
+[zW,pW,kW] = zpkdata(W,'v');
+[zX,pX,kX] = zpkdata(X,'v');
+
+zD = [zW(:); pX(:)];%a/b/c/d = ad/bc
+pD = [pW(:); zX(:)]; %a/b/c/d = ad/bc
+kD = kW / kX;
+cancelled = []; %taylor swift reference
+format long
+for i = 1:numel(zD)
+    [mindiff, j] = min(abs(pD - zD(i)));
+    if mindiff < tol
+        disp('Looks like you could cancel these poles:')
+        disp(pD(j))
+        disp(' and ')
+        disp(zD(i))
+        decision = input(' cancel them? 0/1')
+        if decision == 1
+            cancelled(end+1,:) = [zD(i), pD(j)];  %#ok<*AGROW>
+            pD(j) = NaN; zD(i) = NaN; %goodbye
+        end 
+    end
+end
+
+% Print cancelled pairs [vibecoded print statements]
+disp('Cancelled pole-zero pairs:')
+if isempty(cancelled)
+    disp('(none)');
+else
+    for i = 1:size(cancelled,1)
+        fprintf('  (z - %.6g)  with  (z - %.6g)\n', cancelled(i,1), cancelled(i,2));
+    end
+end
+
+zD = zD(~isnan(zD));
+pD = pD(~isnan(pD));
+D = zpk(zD, pD, kD, T);
+
+% Show result
+disp('Final simplified D(z):')
+zpk(D)
+end
 
