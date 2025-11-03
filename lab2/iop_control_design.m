@@ -7,13 +7,13 @@
 
 % System Parameters
 T = 0.004;
-k_1 = -2.288
-tau = 0.029
+k_1 = -2.288;
+tau = 0.029;
 
-s = tf('s')
-P = k_1/(s*(s*tau+1))
+s = tf('s');
+P = k_1/(s*(s*tau+1));
 
-G = c2d(P, T, 'zoh')
+G = c2d(P, T, 'zoh');
 
 [num, den] = tfdata(G, 'v');
 [r, p, k] = residuez(num, den);
@@ -96,10 +96,10 @@ for k=1:nhat
 end
 
 % verify on a simple example that alpha, beta, gamma, and gammahat are correct!
-alpha
-beta
-gamma
-gammaHat
+alpha;
+beta;
+gamma;
+gammaHat;
 
 %% Determination of A and b matrices for IOP equations
 
@@ -186,6 +186,11 @@ end
 
 %% Defining the objective function and constraints for the optimization
 
+% Define scaling factors
+step_ru = (step_ru * 1.4);
+step_ry = (step_ry * 1.4);
+steadyState = (steadyState * 1.4);
+
 %Objective = 0;
 Objective = 0;
 
@@ -205,7 +210,11 @@ Constraints = [Constraints,
                max(step_ry*[x;xhat]) <= 1.05*(-steadyState * [x;xhat])];
 
 % settling time constraint
+<<<<<<< Updated upstream
 jhat = 0.25/T;
+=======
+jhat = floor(0.25/T);
+>>>>>>> Stashed changes
 Constraints = [Constraints,
                max(step_ry(jhat:end,:)*[x;xhat]) <= 1.02*(-steadyState * [x;xhat]),
                min(step_ry(jhat:end,:)*[x;xhat]) >= 0.98*(-steadyState * [x;xhat])];
@@ -286,6 +295,7 @@ den{1} = real(den{1});
 X = tf(num,den,T);
 
 % find the poles and zeros of W and X
+<<<<<<< Updated upstream
 % zpk(W);
 % zero(W);
 % pole(W);
@@ -298,6 +308,14 @@ X = tf(num,den,T);
 [zX,pX,kX] = zpkdata(X,'v');
 
 %D = recoverD(W, X, T, 0.001)
+=======
+zpk_W = zpk(W);
+zero_W = zero(W);
+pole_W = pole(W);
+zpk_X = zpk(X);
+zero_X = zero(X);
+pole_X = pole(X);
+>>>>>>> Stashed changes
 
 %% Verify design in discrete time
 
@@ -313,7 +331,7 @@ j = sqrt(-1);
 %
 % Example: D = ( (gain_W) / (gain_X) ) * (z - zero(W)) / (z - zero(X)) ... etc.
 %
-D = W/X; % <-- This calculates D automatically. You can replace this
+% D = W/X; % <-- This calculates D automatically. You can replace this
          %     with your by-hand calculation once you find it.
 
 
