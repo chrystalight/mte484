@@ -6,6 +6,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % System Parameters
+
+
+load('pruned_poles.mat')
+load('prunder_poles.mat')
 T = 0.004;
 k_1 = -2.288
 tau = 0.029
@@ -226,7 +230,7 @@ xhatsol = value(xhat);
 %% Plotting the solution
 
 figure(1)
-plot(T*(1:K),step_ry*[xsol;xhatsol]);
+plot(T*(1:K),step_ry*[xsol;xhatsol]-0.7);
 xlabel('Time [s]');
 ylabel('y[k]');
 
@@ -297,54 +301,38 @@ X = tf(num,den,T);
 [zW,pW,kW] = zpkdata(W,'v');
 [zX,pX,kX] = zpkdata(X,'v');
 
-%D = recoverD(W, X, T, 0.001)
 
 %% Verify design in discrete time
 
 % compute D by hand
 j = sqrt(-1);
-% D = 0.43333*((z-0.4)*(z-0.5))/((z-1)*(z-0.3393)*(z+0.0393));
-%
-% TO FIX THIS:
-% 1. Run this script.
-% 2. Look at the MATLAB console output for zpk(W) and zpk(X).
-% 3. Use those gains, poles, and zeros to write the new equation for D = W/X.
-%    (Remember D = gain(W)/gain(X) * (zeros(W))/(poles(W)) * (poles(X))/(zeros(X)) )
-%
-% Example: D = ( (gain_W) / (gain_X) ) * (z - zero(W)) / (z - zero(X)) ... etc.
-%
-D = W/X; % <-- This calculates D automatically. You can replace this
-         %     with your by-hand calculation once you find it.
-
+D = recoverD(W, X, T, 0.00001)
 
 % compute T_ry and T_ru by hand
 %
-% FIX 2 (continued): These are also for the OLD problem.
-%
-% T_ry = (0.43333*(z-0.4))/(0.43333*(z-0.4)+(z-1)*(z-0.3393)*(z+0.0393));
-% T_ru = (0.43333*(z-0.4)*(z-0.5))/(0.43333*(z-0.4)+(z-1)*(z-0.3393)*(z+0.0393));
-%
-% TO FIX THIS:
-% 1. Use your new, correct 'D' from the step above.
-% 2. Use your new plant 'G' (which is G = 1/(z-0.5)).
+
 % 3. Calculate T_ry and T_ru using the feedback formulas:
-%    T_ry = feedback(G*D, 1);
-%    T_ru = feedback(D, G);
-%
-% For now, I will use the automatic versions:
-%T_ry = feedback(G*D, 1);
-%T_ru = feedback(D, G);
+T_ry = feedback(G*D, 1);
+T_ru = feedback(D, G); %these are not transfer functions they're zpg 
 
 
-%figure(1)
-%hold on;
-%step(T_ry,'g--'); % <-- Made the line a dashed green 'g--' to see it better
-%hold off;
+%By default, step applies an input signal that changes from 0 to 1 at t = 0. 
+%To customize the amplitude and bias, use RespConfig. 
+%For instance, compute the response of a SISO state-space model 
+%to a signal that changes from 1 to –1 to at t = 0.
+opt = stepDataOptions('StepAmplitude', 1.4, 'InputOffset', -0.7);
+%opt.Bias = -0.7;
+%opt.Amplitude = 1.4;
 
-%figure(2)
-%hold on;
-%step(T_ru,'g--'); % <-- Made the line a dashed green 'g--' to see it better
-%hold off;
+figure(1)
+hold on;
+step(T_ry, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
+hold off;
+
+figure(2)
+hold on;
+step(T_ru, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
+hold off;
 
 
 
@@ -361,15 +349,22 @@ format long
 for i = 1:numel(zD)
     [mindiff, j] = min(abs(pD - zD(i)));
     if mindiff < tol
-        disp('Looks like you could cancel these poles:')
-        disp(pD(j))
-        disp(' and ')
-        disp(zD(i))
-        decision = input(' cancel them? 0/1')
-        if decision == 1
-            cancelled(end+1,:) = [zD(i), pD(j)];  %#ok<*AGROW>
-            pD(j) = NaN; zD(i) = NaN; %goodbye
-        end 
+        
+        %%uncomment this block to do manual cancellation
+%         disp('Looks like you could cancel these poles:')
+%         disp(pD(j))
+%         disp(' and ')
+%         disp(zD(i))
+%         decision = input(' cancel them? 0/1')
+%         
+%         if decision == 1
+%             cancelled(end+1,:) = [zD(i), pD(j)];  %#ok<*AGROW>
+%             pD(j) = NaN; zD(i) = NaN; %goodbye
+%         end
+        
+        cancelled(end+1,:) = [zD(i), pD(j)];  %#ok<*AGROW>
+        pD(j) = NaN; zD(i) = NaN; %goodbye
+        
     end
 end
 
