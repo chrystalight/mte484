@@ -7,26 +7,32 @@
 
 % System Parameters
 T = 0.004;
-k_1 = -2.0037
-tau = 0.0285
+k_1 = -2.288
+tau = 0.029
 
+s = tf('s')
+P = k_1/(s*(s*tau+1))
+
+G = c2d(P, T, 'zoh')
+
+[num, den] = tfdata(G, 'v');
+[r, p, k] = residuez(num, den);
 
 %Pole Picking Parameters
-total = 20;
+total = 50;
 rmax = 0.9;
 center = 0;
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
 
 j = sqrt(-1);
-stableRealPlantPoles = [0];
+stableRealPlantPoles = [0.8712];
 stableComplexPlantPoles = [];
-unstablePlantPoles = [-1/tau]; 
+unstablePlantPoles = [1.00]; 
 stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
-%cs = [1+j 1-j 2];
-cs = [k_1, -k_1];
+cs = [0.0098, -0.0092];
 
 n = length(qs);
 nhat = length(stablePlantPoles);
@@ -47,7 +53,6 @@ G
 %complexWPoles = [0.2+0.2*j 0.2-0.2*j 0.3+0.3*j 0.3-0.3*j 0.4+0.4*j 0.4-0.4*j];
 
 realWPoles = [];
-
 complexWPoles = [generate_poles(total,rmax,center)];
 ps = [realWPoles complexWPoles];
 
@@ -130,7 +135,7 @@ for k=1:K
 end
 
 % verify on a simple example that step_ry and step_ru are correct!
-% step_ry
+% step_ry = step_ry*1.4;
 % step_ru
 
 %% Determination of steady state vector
@@ -146,7 +151,7 @@ for k=1:nhat
 end
 
 % verify on a simple example that steadyState is correct!
-steadyState
+%steadyState;
 
 %% Defining the variables for the optimization
 
@@ -187,22 +192,22 @@ Objective = 0;
 Constraints = [A*[w;x;xhat] == b];
 
 % input saturation constraint
-%Constraints = [Constraints,
-%               max(step_ru*w) <= 0.6];
+Constraints = [Constraints, ...
+               norm(step_ru*w, inf) <= 6.0];
 
 % steady state constraint
-%Constraints = [Constraints,
-%               steadyState * [x;xhat]+1 == 0];
+Constraints = [Constraints,
+               steadyState * [x;xhat]+1 == 0];
 
-% overshoot constraint
-%Constraints = [Constraints,
-%               max(step_ry*[x;xhat]) <= 4*(-steadyState * [x;xhat])];
+%overshoot constraint
+Constraints = [Constraints,
+               max(step_ry*[x;xhat]) <= 1.05*(-steadyState * [x;xhat])];
 
 % settling time constraint
-%jhat = 0.15/T;
-%Constraints = [Constraints,
-%               max(step_ry(jhat:end,:)*[x;xhat]) <= 1.02*(-steadyState * [x;xhat]),
-%               min(step_ry(jhat:end,:)*[x;xhat]) >= 0.98*(-steadyState * [x;xhat])];
+%jhat = 0.25/T;
+Constraints = [Constraints,
+               max(step_ry(jhat:end,:)*[x;xhat]) <= 1.02*(-steadyState * [x;xhat]),
+               min(step_ry(jhat:end,:)*[x;xhat]) >= 0.98*(-steadyState * [x;xhat])];
 
 %% Solving the optimization problem
 
@@ -280,12 +285,12 @@ den{1} = real(den{1});
 X = tf(num,den,T);
 
 % find the poles and zeros of W and X
-zpk(W)
-zero(W)
-pole(W)
-zpk(X)
-zero(X)
-pole(X)
+zpk(W);
+zero(W);
+pole(W);
+zpk(X);
+zero(X);
+pole(X);
 
 %% Verify design in discrete time
 
@@ -324,17 +329,17 @@ D = W/X; % <-- This calculates D automatically. You can replace this
 %    T_ru = feedback(D, G);
 %
 % For now, I will use the automatic versions:
-T_ry = feedback(G*D, 1);
-T_ru = feedback(D, G);
+%T_ry = feedback(G*D, 1);
+%T_ru = feedback(D, G);
 
 
-figure(1)
-hold on;
-step(T_ry,'g--'); % <-- Made the line a dashed green 'g--' to see it better
-hold off;
+%figure(1)
+%hold on;
+%step(T_ry,'g--'); % <-- Made the line a dashed green 'g--' to see it better
+%hold off;
 
-figure(2)
-hold on;
-step(T_ru,'g--'); % <-- Made the line a dashed green 'g--' to see it better
-hold off;
+%figure(2)
+%hold on;
+%step(T_ru,'g--'); % <-- Made the line a dashed green 'g--' to see it better
+%hold off;
 
