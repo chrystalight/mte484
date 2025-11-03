@@ -58,7 +58,11 @@ G;
 
 realWPoles = [];
 %complexWPoles = [generate_poles(total,rmax,center)];
+<<<<<<< Updated upstream
 complexWPoles = pruneder_poles.';
+=======
+complexWPoles = prunedest_poles.'
+>>>>>>> Stashed changes
 ps = [realWPoles complexWPoles];
 
 mreal = length(realWPoles);
@@ -99,11 +103,19 @@ for k=1:nhat
     end
 end
 
+<<<<<<< Updated upstream
 % verify on a simple example that alpha, beta, gamma, and gammahat are correct!
 alpha;
 beta;
 gamma;
 gammaHat;
+=======
+% % verify on a simple example that alpha, beta, gamma, and gammahat are correct!
+% alpha
+% beta
+% gamma
+% gammaHat
+>>>>>>> Stashed changes
 
 %% Determination of A and b matrices for IOP equations
 

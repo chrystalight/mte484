@@ -1,5 +1,9 @@
 #include <Arduino.h>
 #include "geeWhiz.h"
+#include <cppQueue.h>
+#define	IMPLEMENTATION	FIFO
+
+
 
 //INSTRUCTIONS:
 //TO ADJUST KP, UNCOMMENT THE RIGHT LINE AND RECOMPILE AND RE UPLOAD.
@@ -12,6 +16,15 @@ int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
 bool autostep = true;
 
+//================ Queue Implementation
+
+cppQueue u_queue(sizeof(double), n_poles, IMPLEMENTATION);
+cppQueue e_queue(sizeof(double), n_zeroes, IMPLEMENTATION);
+
+double a_coeffs[n_zeroes] = [cofficients go here]; // coefficients on the numerator of D
+double b_coeffs[n_poles] = [coefficients go here]; //coefficients on the denominator of D
+
+
 
 // =============== System and Control Parameters ===============
 int T = 5;                                  // Sampling time in MS
@@ -19,6 +32,8 @@ float Kp = -4.8232;
 float stiction_offset_neg = -0.202;
 float stiction_offset_pos = 0.236;
 int max_T = 5000;                          // Test duration in MS
+
+
 
 // --- Input Parameters ---
 float frequency_hz;                         // Default for sine wave mode
@@ -48,7 +63,6 @@ volatile ProgramState currentState = WAIT_FOR_INPUT;
 volatile int i = 0;
 volatile double target_angle = -1;
 double trial_value = -1; //mode-dependent, eg. step magnitude
-
 volatile int trial_num = 1; // 1-indexed because matlab
 
 //=================== Potentiometer Calibration ====
@@ -62,7 +76,7 @@ double map_potentiometer(int val) {
   return radians;
 }
 
-double compute_U(double ref, double error){
+double (double ref, double error){
   //where ref is the reference angle in radians
   //and y is the actual angle in radian
 
@@ -203,9 +217,7 @@ void interval_control_code(void) {
     final_ref = U;    // Log the commanded voltage for reference
   } 
   else {
-
     // Modes 1 & 2: Closed-loop control.
-
     // --- Generate the reference signal based on the selected mode ---
     if (input_mode == 1) {
       original_ref = target_angle;
@@ -216,23 +228,34 @@ void interval_control_code(void) {
     }
 
     // ---- Apply Saturator to the reference signal if active ----
-    final_ref = original_ref;
-    if (saturator_active) {
-      if (final_ref > saturation_limit) {
+    if (final_ref > saturation_limit) {
         final_ref = saturation_limit;
-      } else if (final_ref < -saturation_limit) {
+    } else if (final_ref < -saturation_limit) {
         final_ref = -saturation_limit;
-      }
     }
 
     // ---- Proportional Control Law ----
+    
     double error = final_ref - current_angle;
-    U = Kp * error;
+    e_queue.push(error);
+    double u_total = 0.0;
+    double peeker;
 
+    for(j = 1, j<n_poles, j++){
+      u_queue.peekIdx(&peeker, j);
+      u_total -= b_coeffs[j]*peeker;
+    }
+
+    for(j = 0, j<n_zeroes, j++){
+      e_queue.peekIdx(&peeker, j);
+      u_total -= a_coeffs[j]*peeker;
+    }
+    U = u_total/b_coeffs[0];
     // ---- Add Stiction Compensation ----
     if (abs(U) > 0.01) {
       U = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
     }
+    u_queue.push(U)
   }
   
   // Apply the calculated voltage U to the motor
@@ -252,7 +275,6 @@ void interval_control_code(void) {
   Serial.print(trial_value);
   Serial.print(",");
   Serial.println(motor_raw);
-  
   i++;
 }
 
