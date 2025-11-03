@@ -49,7 +49,7 @@ G = 0;
 for k=1:n
     G = G + cs(k)/(z-qs(k));
 end
-G
+G;
 
 %% Poles Chosen in the Simple Pole Approximation of W[z]
 
@@ -58,7 +58,7 @@ G
 
 realWPoles = [];
 %complexWPoles = [generate_poles(total,rmax,center)];
-complexWPoles = pruneder_poles.'
+complexWPoles = pruneder_poles.';
 ps = [realWPoles complexWPoles];
 
 mreal = length(realWPoles);
@@ -100,10 +100,10 @@ for k=1:nhat
 end
 
 % verify on a simple example that alpha, beta, gamma, and gammahat are correct!
-alpha
-beta
-gamma
-gammaHat
+alpha;
+beta;
+gamma;
+gammaHat;
 
 %% Determination of A and b matrices for IOP equations
 
@@ -209,7 +209,7 @@ Constraints = [Constraints,
                max(step_ry*[x;xhat]) <= 1.05*(-steadyState * [x;xhat])];
 
 % settling time constraint
-jhat = 0.25/T;
+jhat = floor(0.25/T);
 Constraints = [Constraints,
                max(step_ry(jhat:end,:)*[x;xhat]) <= 1.02*(-steadyState * [x;xhat]),
                min(step_ry(jhat:end,:)*[x;xhat]) >= 0.98*(-steadyState * [x;xhat])];
@@ -306,7 +306,7 @@ X = tf(num,den,T);
 
 % compute D by hand
 j = sqrt(-1);
-D = recoverD(W, X, T, 0.00001)
+D = recoverD(W, X, T, 0.00001);
 
 % compute T_ry and T_ru by hand
 %
