@@ -2,27 +2,56 @@
 #include "geeWhiz.h"
 #include <cppQueue.h>
 
-#define	IMPLEMENTATION FIFO
 #define n_zeroes 26
 #define n_poles 27
 
-//INSTRUCTIONS:
-//TO ADJUST KP, UNCOMMENT THE RIGHT LINE AND RECOMPILE AND RE UPLOAD.
-//SAME FOR T
+// ========== Pins ==========
+const int MOT_PIN = A0;   // motor angle sensor
+const int BAL_PIN = A1;   // ball position sensor
 
-//MAKE SURE INPUT MODE AND SATURATOR ACTIVE ARE SET CORRECTLY -- INPUT MODE 1 WILL BE WHAT YOU WANT
-//===========NEW LUCAS LOOK HERE!!! ===========
-float rad_mag[] = {M_PI/8, -M_PI/8, M_PI/4, -M_PI/4};
-int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
-int step_index = 0;
-bool autostep = false;
+// ========== System Parameters ==========
+const int T = 5;                                  // Sampling time in MS
+const float stiction_offset_neg = -0.202;
+const float stiction_offset_pos = 0.236;
+const int max_T = 5000;                          // Test duration in MS
+const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
-//================ Queue Implementation
+// ========== For Logging =============
+struct LogBook {
+  //we probably do not need all of these values but i can figure it out
+  long time_ms;
+  double ref;             
+  double constrained_ref; 
+  double current_angle;
+  int trial_num;
+  double trial_value;
+  int motor_raw;
+};
+volatile LogBook new_data;
+volatile bool data_alarm = false;
+void printLogBook(LogBook data){
+    Serial.print(data.time_ms);
+    Serial.print(",");
+    Serial.print(data.ref, 5); 
+    Serial.print(",");
+    Serial.print(data.constrained_ref, 5);
+    Serial.print(",");
+    Serial.print(data.current_angle, 5);
+    Serial.print(",");
+    Serial.print(data.trial_num);
+    Serial.print(",");
+    Serial.print(data.trial_value);
+    Serial.print(",");
+    Serial.println(data.motor_raw);
+}
 
+
+//========== For Controller Implementation ==========
+#define	IMPLEMENTATION FIFO
 cppQueue u_queue(sizeof(double), n_poles, IMPLEMENTATION);
 cppQueue e_queue(sizeof(double), n_zeroes, IMPLEMENTATION);
 
-double a_coeffs[n_zeroes] = {
+const double a_coeffs[n_zeroes] = {
   -4.014671308410470,
   6.595993799639460,
   -3.837648018627513,
@@ -51,7 +80,7 @@ double a_coeffs[n_zeroes] = {
   0.004242677516370,
 }; // coefficients on the numerator of D
 
-double b_coeffs[n_poles] = {
+const double b_coeffs[n_poles] = {
   1.000000000000000,
   -1.642984519812282,
   0.958321968432410,
@@ -81,42 +110,34 @@ double b_coeffs[n_poles] = {
   0.000008696897701,
 }; //coefficients on the denominator of D
 
+// ========== For testing /input generation ==========
 
-
-// =============== System and Control Parameters ===============
-int T = 5;                                  // Sampling time in MS
-float Kp = -4.8232;
-float stiction_offset_neg = -0.202;
-float stiction_offset_pos = 0.236;
-int max_T = 5000;                          // Test duration in MS
-
-
-
-// --- Input Parameters ---
+// --- Sin Parameters ---
 float frequency_hz;                         // Default for sine wave mode
 const float amplitude_rad = M_PI / 8.0;
 float step_magnitude_rad;                   // Default for step input mode
 float open_loop_voltage;                    // Default for open-loop mode
+// --- Autostepping --- 
+float rad_mag[] = {M_PI/8, -M_PI/8, M_PI/4, -M_PI/4};
+int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
+int step_index = 0;
+bool autostep = false;
 
-// --- Saturator Limits ---
-const float saturation_limit = 0.7;         // The limit for the reference signal in radians
+// =============== State setup ===============
+enum ControlMode{
+  STEP_INPUT = 1,
+  SINE_INPUT = 2
+};
 
-// =============== Mode setup ===============
-// Set the desired mode for the controller.
-// 0 --> Open-loop control. 
-// 1 --> Step input mode.
-// 2 --> Sine wave tracking mode. 
-int input_mode = 1;
-bool saturator_active = false;
+enum class ProgramState { 
+  WAIT_FOR_INPUT, 
+  RUNNING_TEST, 
+  TEST_COMPLETE 
+};
 
-// ================== Pins ==================
-int MOT_PIN = A0;   // motor angle sensor
-int BAL_PIN = A1;   // ball position sensor
+int input_mode = STEP_INPUT;
 
-// State machine to control the program flow
-enum ProgramState { WAIT_FOR_INPUT, RUNNING_TEST, TEST_COMPLETE };
 volatile ProgramState currentState = WAIT_FOR_INPUT;
-
 volatile int i = 0;
 volatile double target_angle = -1;
 double trial_value = -1; //mode-dependent, eg. step magnitude
@@ -133,79 +154,25 @@ double map_potentiometer(int val) {
   return radians;
 }
 
-// double (double ref, double error){
-//   //where ref is the reference angle in radians
-//   //and y is the actual angle in radian
+// ================== HELPER FUNCTIONS ====
 
-
-// }
-
-// ================== Setup ==================
-void setup() {
-  pinMode(A5, OUTPUT);
-  Serial.begin(115200);
-  delay(1000);
-  geeWhizBegin();
-  set_control_interval_ms(T);
-  setMotorVoltage(0);
-
-  Serial.println("==================================================");
-  Serial.print("Proportional Gain (Kp) = ");
-  Serial.println(Kp);
-  Serial.print("Saturator Active: ");
-  Serial.println(saturator_active ? "YES" : "NO");
-
-  // Check input mode and display the appropriate prompt
-  if (input_mode == 0) {
-    Serial.println("Mode: OPEN-LOOP CONTROL");
-    Serial.println("\nPlease enter a MOTOR VOLTAGE (Vin) and press Enter:");
-  } else if (input_mode == 1) {
-    Serial.println("Mode: STEP INPUT");
-    if(autostep){
-      Serial.println("Mode: STEP INPUT (AUTOMATED)");
-      // --- MODIFICATION: Changed the initial prompt ---
-      Serial.println("\nPress any character and Enter to start the first step trial:");
-    }
-    else{
-      Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
-    }
-  } else if (input_mode == 2) {
-    Serial.println("Mode: SINE WAVE TRACKING");
-    Serial.println("\nPlease enter a SINE WAVE FREQUENCY (in Hz) and press Enter:");
-  }
-  Serial.println("==================================================");
-}
-
-// ================== Loop ==================
-void loop() {
-  if (currentState == WAIT_FOR_INPUT) {
-    if (Serial.available() > 0) {
-      float userInput = Serial.parseFloat();
-      while (Serial.available() > 0) { Serial.read(); }
-
+void startTest(float userInput){
       Serial.println("==============================================================================");
-      Serial.print("Proportional Gain (Kp) = ");
-      Serial.println(Kp);
-      if (input_mode == 0) {
-        open_loop_voltage = userInput;
-        Serial.print("NEW TEST STARTED -> OPEN-LOOP VOLTAGE: ");
-        Serial.print(open_loop_voltage, 4);
-        Serial.println(" V");
-      } else if (input_mode == 1) {
+      if  (input_mode == STEP_INPUT) {
         if(autostep){
           step_magnitude_rad = rad_mag[step_index];
         }
         else{
           step_magnitude_rad = userInput;
         }
-
         trial_value = step_magnitude_rad;
         double current_angle = map_potentiometer(analogRead(MOT_PIN)); 
         target_angle = current_angle + step_magnitude_rad;
+
         Serial.print("NEW TEST STARTED -> STEP MAGNITUDE: ");
         Serial.print(step_magnitude_rad, 4);
         Serial.println(" rad");
-      } else if (input_mode == 2) {
+      } else if (input_mode == SIN_INPUT) {
         frequency_hz = userInput;
         trial_value = frequency_hz;
         Serial.print("NEW TEST STARTED -> SINE WAVE FREQUENCY: ");
@@ -218,16 +185,14 @@ void loop() {
       
       i = 0;
       currentState = RUNNING_TEST;
-    }
+}
 
-  } else if (currentState == TEST_COMPLETE) {
+void endTest(){
     Serial.println("==============================================================================");
     Serial.println("Test complete.");
     trial_num += 1;
     
-    if (input_mode == 0) {
-        Serial.println("\nPlease enter a new voltage to run another test:");
-    } else if (input_mode == 1) {
+    if (input_mode == STEP_INPUT) 
       if(autostep){
         step_index++;
         if (step_index < num_steps) {
@@ -236,23 +201,88 @@ void loop() {
             Serial.println("\n You're finished!!! Returning to normal operation now");
             autostep = false;
         }
-        currentState = WAIT_FOR_INPUT;
       }
         Serial.println("\nPlease enter a new step magnitude to run another test:");
-    } else if (input_mode == 2) {
+    } else if (input_mode == SIN_INPUT) {
         Serial.println("\nPlease enter a new frequency to run another test:");
     }
+
     currentState = WAIT_FOR_INPUT;
+
+}
+
+
+// ================== Setup ==================
+void setup() {
+  pinMode(A5, OUTPUT);
+  Serial.begin(115200);
+  delay(1000);
+  geeWhizBegin();
+  set_control_interval_ms(T);
+  setMotorVoltage(0);
+
+  Serial.println("==================================================");
+
+  switch(input_mode){
+
+    case STEP_INPUT: 
+      Serial.println("Mode: STEP INPUT");
+      if(autostep){
+        Serial.println("(AUTOMATED)");
+        Serial.println("\nPress any character and Enter to start the first step trial:");
+      }
+      else{
+        Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
+      }
+      break;
+
+    case SIN_INPUT:
+      Serial.println("Mode: SINE WAVE TRACKING");
+      Serial.println("\nPlease enter a SINE WAVE FREQUENCY (in Hz) and press Enter:");
+      break;
+  }
+
+  Serial.println("==================================================");
+}
+
+// ================== Loop ==================
+void loop() {
+
+  if (data_alarm){
+    LogBook curr_data;
+    noInterrupts(); //turn off interrupts to avoid race condition [isr and loop changing variable at same time]
+    curr_data = new_data;
+    data_alarm = false;
+    interrupts();
+    printLogBook(curr_data);
+  }
+
+  switch(currentState){
+    case RUNNING_TEST:
+      break;
+    case WAIT_FOR_INPUT: 
+      if (Serial.available() > 0) {
+        float userInput = Serial.parseFloat();
+        while (Serial.available() > 0) { Serial.read(); }
+        startTest(userInput);
+      }
+      break;
+
+    case TEST_COMPLETE:
+      endTest();
+      break;  
   }
 }
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
+
   if (currentState != RUNNING_TEST) {
     return;
   }
   
   if (T * i >= max_T) {
+    //test is over!
     setMotorVoltage(0);
     currentState = TEST_COMPLETE;
     return;
@@ -262,43 +292,28 @@ void interval_control_code(void) {
   int motor_raw = analogRead(MOT_PIN);
   double current_angle = map_potentiometer(motor_raw);
 
-  double original_ref = 0;
-  double final_ref = 0;
-  double U = 0;
+  // ---- Closed Loop Control Logic ----
 
+  double ref;
   // ---- Control Logic based on Mode ----
-  if (input_mode == 0) {
-    // Mode 0: Direct open-loop voltage control.
-    U = open_loop_voltage;
-    original_ref = U; // Log the commanded voltage for reference
-    final_ref = U;    // Log the commanded voltage for reference
-  } 
-  else {
-    // Modes 1 & 2: Closed-loop control.
-    // --- Generate the reference signal based on the selected mode ---
-    if (input_mode == 1) {
-      original_ref = target_angle;
-      final_ref = original_ref;
+    if (input_mode == STEP_INPUT) {
+      ref = target_angle;
     } 
     else { // input_mode == 2, calculate sin wave
       float current_time_s = (float)(T * i) / 1000.0;
-      original_ref = amplitude_rad * sin(2.0 * M_PI * frequency_hz * current_time_s);
+      ref = amplitude_rad * sin(2.0 * M_PI * frequency_hz * current_time_s);
     }
 
-    // ---- Apply Saturator to the reference signal if active ----
-    if (final_ref > saturation_limit) {
-        final_ref = saturation_limit;
-    } else if (final_ref < -saturation_limit) {
-        final_ref = -saturation_limit;
-    }
-
-    // ---- Proportional Control Law ----
+    double constrained_ref = constrain(ref, -saturation_limit, saturation_limit);
     
-    double error = final_ref - current_angle;
+    // ---- Discrete Controler ----
+    
+    double error = constrained_ref - current_angle;
     e_queue.push(&error);
     double u_total = 0.0;
     double peeker;
 
+    //CHECK QUEUE INDEX ORDER LOGIC IM NOT CONFIDENT 
     for(int j = 1; j<n_poles; j++){
       u_queue.peekIdx(&peeker, j);
       u_total -= b_coeffs[j]*peeker;
@@ -306,34 +321,33 @@ void interval_control_code(void) {
 
     for(int j = 0; j<n_zeroes; j++){
       e_queue.peekIdx(&peeker, j);
-      u_total -= a_coeffs[j]*peeker;
+      u_total += a_coeffs[j]*peeker;
     }
-    U = u_total/b_coeffs[0];
-    // ---- Add Stiction Compensation ----
-    if (abs(U) > 0.01) {
-      U = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
-    }
+
+    double U = u_total/b_coeffs[0];
     u_queue.push(&U);
-  }
+    
+
+    //stiction comp:
+    double U_comped = U;
+    if (abs(U) > 0.01) {
+      U_comped = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
+    }
+
+    setMotorVoltage(U_comped);
   
-  // Apply the calculated voltage U to the motor
-  setMotorVoltage(U);
-  
-  // ---- Print data in CSV format ----
-  Serial.print(T * i);
-  Serial.print(",");
-  Serial.print(original_ref, 5); 
-  Serial.print(",");
-  Serial.print(final_ref, 5);
-  Serial.print(",");
-  Serial.print(current_angle, 5);
-  Serial.print(",");
-  Serial.print(trial_num);
-  Serial.print(",");
-  Serial.print(trial_value);
-  Serial.print(",");
-  Serial.println(motor_raw);
-  i++;
+  // ---- log data ----
+    new_data.time_ms = T * i;
+    new_data.ref = ref;
+    new_data.constrained_ref = constrained_ref;
+    new_data.current_angle = current_angle;
+    new_data.trial_num = trial_num;
+    new_data.trial_value = trial_value;
+    new_data.motor_raw = motor_raw;
+
+    data_alarm = true;
+
+    i++;
 }
 
 
