@@ -328,7 +328,7 @@ X = tf(num,den,T);
 
 % compute D by hand
 j = sqrt(-1);
-D = recoverD(W, X, T, 0.00001);
+D = recoverD(W, X, T, 0.0001);
 
 % compute T_ry and T_ru by hand
 %

@@ -2,8 +2,8 @@
 #include "geeWhiz.h"
 #include <cppQueue.h>
 
-#define n_zeroes 26
-#define n_poles 27
+#define N_ZEROS 26
+#define N_POLES 27
 
 // ========== Pins ==========
 const int MOT_PIN = A0;   // motor angle sensor
@@ -27,6 +27,7 @@ struct LogBook {
   double trial_value;
   int motor_raw;
 };
+
 volatile LogBook new_data;
 volatile bool data_alarm = false;
 void printLogBook(LogBook data){
@@ -48,10 +49,10 @@ void printLogBook(LogBook data){
 
 //========== For Controller Implementation ==========
 #define	IMPLEMENTATION FIFO
-cppQueue u_queue(sizeof(double), n_poles, IMPLEMENTATION);
-cppQueue e_queue(sizeof(double), n_zeroes, IMPLEMENTATION);
+cppQueue u_queue(sizeof(double), N_POLES, IMPLEMENTATION, true); //true to enable overwriting
+cppQueue e_queue(sizeof(double), N_ZEROS, IMPLEMENTATION, true);
 
-const double a_coeffs[n_zeroes] = {
+const double a_coeffs[N_ZEROS] = {
   -4.014671308410470,
   6.595993799639460,
   -3.837648018627513,
@@ -80,7 +81,7 @@ const double a_coeffs[n_zeroes] = {
   0.004242677516370,
 }; // coefficients on the numerator of D
 
-const double b_coeffs[n_poles] = {
+const double b_coeffs[N_POLES] = {
   1.000000000000000,
   -1.642984519812282,
   0.958321968432410,
@@ -129,15 +130,15 @@ enum ControlMode{
   SINE_INPUT = 2
 };
 
-enum class ProgramState { 
-  WAIT_FOR_INPUT, 
-  RUNNING_TEST, 
-  TEST_COMPLETE 
+enum ProgramState { 
+  WAIT_FOR_INPUT = 1, 
+  RUNNING_TEST = 2, 
+  TEST_COMPLETE = 3
 };
 
 int input_mode = STEP_INPUT;
 
-volatile ProgramState currentState = WAIT_FOR_INPUT;
+volatile int currentState = WAIT_FOR_INPUT;
 volatile int i = 0;
 volatile double target_angle = -1;
 double trial_value = -1; //mode-dependent, eg. step magnitude
@@ -172,7 +173,8 @@ void startTest(float userInput){
         Serial.print("NEW TEST STARTED -> STEP MAGNITUDE: ");
         Serial.print(step_magnitude_rad, 4);
         Serial.println(" rad");
-      } else if (input_mode == SIN_INPUT) {
+      } 
+      else if (input_mode == SINE_INPUT) {
         frequency_hz = userInput;
         trial_value = frequency_hz;
         Serial.print("NEW TEST STARTED -> SINE WAVE FREQUENCY: ");
@@ -192,7 +194,7 @@ void endTest(){
     Serial.println("Test complete.");
     trial_num += 1;
     
-    if (input_mode == STEP_INPUT) 
+    if (input_mode == STEP_INPUT){
       if(autostep){
         step_index++;
         if (step_index < num_steps) {
@@ -203,7 +205,7 @@ void endTest(){
         }
       }
         Serial.println("\nPlease enter a new step magnitude to run another test:");
-    } else if (input_mode == SIN_INPUT) {
+    } else if (input_mode == SINE_INPUT) {
         Serial.println("\nPlease enter a new frequency to run another test:");
     }
 
@@ -211,6 +213,12 @@ void endTest(){
 
 }
 
+void fillQueueWithZero(cppQueue& q, int size) {
+  double zero = 0.0;
+  for (int i = 0; i < size; i++) {
+    q.push(&zero); 
+  }
+}
 
 // ================== Setup ==================
 void setup() {
@@ -220,6 +228,9 @@ void setup() {
   geeWhizBegin();
   set_control_interval_ms(T);
   setMotorVoltage(0);
+
+  fillQueueWithZero(u_queue, N_POLES);
+  fillQueueWithZero(e_queue, N_ZEROS);
 
   Serial.println("==================================================");
 
@@ -236,7 +247,7 @@ void setup() {
       }
       break;
 
-    case SIN_INPUT:
+    case SINE_INPUT:
       Serial.println("Mode: SINE WAVE TRACKING");
       Serial.println("\nPlease enter a SINE WAVE FREQUENCY (in Hz) and press Enter:");
       break;
@@ -251,7 +262,8 @@ void loop() {
   if (data_alarm){
     LogBook curr_data;
     noInterrupts(); //turn off interrupts to avoid race condition [isr and loop changing variable at same time]
-    curr_data = new_data;
+    // Use memcpy to copy the value of 'a' into 'b'
+    memcpy(&curr_data, (void*)&new_data, sizeof(LogBook));    
     data_alarm = false;
     interrupts();
     printLogBook(curr_data);
@@ -313,15 +325,27 @@ void interval_control_code(void) {
     double u_total = 0.0;
     double peeker;
 
-    //CHECK QUEUE INDEX ORDER LOGIC IM NOT CONFIDENT 
-    for(int j = 1; j<n_poles; j++){
-      u_queue.peekIdx(&peeker, j);
+    //to get error at current time, you need to check index of queue-size - 1. index[0] --> oldest error
+
+    //first subtract: b coefficients, from 1 to N_POLES --> b1 * u [k - 1]
+    for(int j = 1; j<N_POLES; j++){
+      u_queue.peekIdx(&peeker, N_POLES-j);
       u_total -= b_coeffs[j]*peeker;
+
+      //example: at j = 1
+      //u_queue.peekIdx(&peeker, N_POLES-j); --> this gives the 'last' value of u_queue, which is the most recently saved U value, u[k-1]
+      //u_total -= b_coeffs[j]*peeker; --> this gets b1, giving b1*u[k-1]
+
+      //example: at j = n_poles-1
+      //u_queue.peekIdx(&peeker, N_POLES-j); --> this gives u_queue[0], , which is oldest historical value, u[k-27] in this case
+      //u_total -= b_coeffs[j]*peeker; --> this gets b[26], the last b coefficient, giving b[26]*u[k-26]
     }
 
-    for(int j = 0; j<n_zeroes; j++){
-      e_queue.peekIdx(&peeker, j);
+    for(int j = 0; j<N_ZEROS; j++){
+      e_queue.peekIdx(&peeker, N_ZEROS-j);
       u_total += a_coeffs[j]*peeker;
+      //we want to do a[j] times e[k-j] e.g. starting with a[0]*e[k]
+      //e[k-j] is counted backwards starting from N_ZEROS-1 --> e[k-j] is at index (N_ZEROS-1-j)
     }
 
     double U = u_total/b_coeffs[0];
