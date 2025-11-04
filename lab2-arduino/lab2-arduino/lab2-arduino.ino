@@ -25,25 +25,25 @@ struct LogBook {
   double current_angle;
   int trial_num;
   double trial_value;
-  int motor_raw;
+  int u_actual;
 };
 
 volatile LogBook new_data;
 volatile bool data_alarm = false;
 void printLogBook(LogBook data){
-    Serial.print(data.time_ms);
+    Serial.print(data.time_ms); //time in ms since we started trial
     Serial.print(",");
-    Serial.print(data.ref, 5); 
+    Serial.print(data.ref, 5);  //reference angle
     Serial.print(",");
-    Serial.print(data.constrained_ref, 5);
+    Serial.print(data.constrained_ref, 5); //reference angle after saturator
     Serial.print(",");
-    Serial.print(data.current_angle, 5);
+    Serial.print(data.current_angle, 5); //current calculated angle
     Serial.print(",");
-    Serial.print(data.trial_num);
+    Serial.print(data.trial_num); //index for autostepping
     Serial.print(",");
-    Serial.print(data.trial_value);
+    Serial.print(data.trial_value); //initial reference angle again for some reason
     Serial.print(",");
-    Serial.println(data.motor_raw);
+    Serial.println(data.u_actual); //controller output
 }
 
 
@@ -119,7 +119,7 @@ const float amplitude_rad = M_PI / 8.0;
 float step_magnitude_rad;                   // Default for step input mode
 float open_loop_voltage;                    // Default for open-loop mode
 // --- Autostepping --- 
-float rad_mag[] = {M_PI/8, -M_PI/8, M_PI/4, -M_PI/4};
+float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
 bool autostep = false;
@@ -161,18 +161,21 @@ void startTest(float userInput){
       Serial.println("==============================================================================");
       if  (input_mode == STEP_INPUT) {
         if(autostep){
-          step_magnitude_rad = rad_mag[step_index];
+          target_angle = rad_mag[step_index];
+          trial_value = target_angle;
+          Serial.print("NEW TEST STARTED -> REFERENCE ANGLE: ");
+          Serial.print(target_angle, 4);
+          Serial.println(" rad");
         }
         else{
           step_magnitude_rad = userInput;
+          trial_value = step_magnitude_rad;
+          double current_angle = map_potentiometer(analogRead(MOT_PIN)); 
+          target_angle = current_angle + step_magnitude_rad;
+          Serial.print("NEW TEST STARTED -> STEP MAGNITUDE: ");
+          Serial.print(step_magnitude_rad, 4);
+          Serial.println(" rad");
         }
-        trial_value = step_magnitude_rad;
-        double current_angle = map_potentiometer(analogRead(MOT_PIN)); 
-        target_angle = current_angle + step_magnitude_rad;
-
-        Serial.print("NEW TEST STARTED -> STEP MAGNITUDE: ");
-        Serial.print(step_magnitude_rad, 4);
-        Serial.println(" rad");
       } 
       else if (input_mode == SINE_INPUT) {
         frequency_hz = userInput;
@@ -193,12 +196,17 @@ void endTest(){
     Serial.println("==============================================================================");
     Serial.println("Test complete.");
     trial_num += 1;
+
+    currentState = WAIT_FOR_INPUT; //so any interrupts here are just passed
+
     
     if (input_mode == STEP_INPUT){
       if(autostep){
         step_index++;
         if (step_index < num_steps) {
-            Serial.println("\nInput a character and enter to run the next one");
+            Serial.println("Please wait for the next step to occur.");
+            delay(max_T);
+            startTest(-1);
         } else {
             Serial.println("\n You're finished!!! Returning to normal operation now");
             autostep = false;
@@ -209,7 +217,6 @@ void endTest(){
         Serial.println("\nPlease enter a new frequency to run another test:");
     }
 
-    currentState = WAIT_FOR_INPUT;
 
 }
 
@@ -240,7 +247,7 @@ void setup() {
       Serial.println("Mode: STEP INPUT");
       if(autostep){
         Serial.println("(AUTOMATED)");
-        Serial.println("\nPress any character and Enter to start the first step trial:");
+        Serial.println("\nPress any character and Enter to start the trial:");
       }
       else{
         Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
@@ -307,6 +314,7 @@ void interval_control_code(void) {
   // ---- Closed Loop Control Logic ----
 
   double ref;
+
   // ---- Control Logic based on Mode ----
     if (input_mode == STEP_INPUT) {
       ref = target_angle;
@@ -342,7 +350,7 @@ void interval_control_code(void) {
     }
 
     for(int j = 0; j<N_ZEROS; j++){
-      e_queue.peekIdx(&peeker, N_ZEROS-j);
+      e_queue.peekIdx(&peeker, N_ZEROS-j-1);
       u_total += a_coeffs[j]*peeker;
       //we want to do a[j] times e[k-j] e.g. starting with a[0]*e[k]
       //e[k-j] is counted backwards starting from N_ZEROS-1 --> e[k-j] is at index (N_ZEROS-1-j)
@@ -367,7 +375,7 @@ void interval_control_code(void) {
     new_data.current_angle = current_angle;
     new_data.trial_num = trial_num;
     new_data.trial_value = trial_value;
-    new_data.motor_raw = motor_raw;
+    new_data.u_actual = U_comped;
 
     data_alarm = true;
 
