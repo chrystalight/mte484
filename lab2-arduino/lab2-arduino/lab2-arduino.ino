@@ -11,8 +11,8 @@ const int BAL_PIN = A1;   // ball position sensor
 
 // ========== System Parameters ==========
 const int T = 5;                                  // Sampling time in MS
-const float stiction_offset_neg = -0.202;
-const float stiction_offset_pos = 0.236;
+const float stiction_offset_neg = -0.54;
+const float stiction_offset_pos = 0.08;
 const int max_T = 5000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
@@ -157,7 +157,7 @@ double ball_reading_1 = 0; //sensor output @ 0.1 m
 double ball_reading_2 = 0; //sensor output @ 0.25 m
 
 
-double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1) */;
+double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1);
 double ball_b = ball_pos_1 - ball_m * ball_reading_1;
 
 

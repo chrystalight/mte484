@@ -16,7 +16,7 @@ double offset = M_PI/4-m*pot_max;
 // Global flag to control when the ISR prints data
 bool enableIsrPrinting = false;
 
-int sign = 1;
+int sign = -1;
 // NEW: Array to store the results of each stiction test
 const int MAX_RESULTS = 20;
 float stiction_results[MAX_RESULTS];
@@ -29,7 +29,7 @@ double map_potentiometer(int val){
 
 void runStictionTest() {
   // --- Test Parameters ---
-  const float start_val = sign*0.15;                   // Starting voltage for the test
+  const float start_val = sign*0.50;                   // Starting voltage for the test
   const float increment_val = sign*0.01;                // Voltage step
   const int   readings_per_step = 40;               // How many angle readings per voltage
   const int   delay_between_readings_ms = 100;     // Wait time between readings
