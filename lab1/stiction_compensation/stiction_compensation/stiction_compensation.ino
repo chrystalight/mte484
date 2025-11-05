@@ -26,7 +26,6 @@ double map_potentiometer(int val){
   return radians;
 }
 
-// ================== MODIFIED: Automated Stiction Test Function ==================
 void runStictionTest() {
   // --- Test Parameters ---
   const float start_val = -0.15;                   // Starting voltage for the test

@@ -144,15 +144,31 @@ volatile double target_angle = -1;
 double trial_value = -1; //mode-dependent, eg. step magnitude
 volatile int trial_num = 1; // 1-indexed because matlab
 
-//=================== Potentiometer Calibration ====
-int pot_min = 565;
-int pot_max = 455;
-double m = M_PI / (2.0 * (pot_max - pot_min));
-double offset = M_PI / 4.0 - m * pot_max;
+//=================== Potentiometer Calibrations ====
+const int motor_pot_min = 565;
+const int motor_pot_max = 455;
+const double motor_pot_slope = M_PI / (2.0 * (motor_pot_max - motor_pot_min));
+const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
+
+
+double ball_pos_1 = 0.1; //meters
+double ball_pos_2 = 0.25; //meters
+double ball_reading_1 = 0; //sensor output @ 0.1 m
+double ball_reading_2 = 0; //sensor output @ 0.25 m
+
+
+double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1) */;
+double ball_b = ball_pos_1 - ball_m * ball_reading_1;
+
 
 double map_potentiometer(int val) {
-  double radians = m * val + offset;
+  double radians = motor_pot_slope * val + motor_pot_offset;
   return radians;
+}
+
+double map_ball_sensor(int val){
+  double meters = ball_m * val + ball_b;
+  return meters;
 }
 
 // ================== HELPER FUNCTIONS ====
