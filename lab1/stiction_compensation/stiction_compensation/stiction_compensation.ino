@@ -16,6 +16,7 @@ double offset = M_PI/4-m*pot_max;
 // Global flag to control when the ISR prints data
 bool enableIsrPrinting = false;
 
+int sign = 1;
 // NEW: Array to store the results of each stiction test
 const int MAX_RESULTS = 20;
 float stiction_results[MAX_RESULTS];
@@ -28,8 +29,8 @@ double map_potentiometer(int val){
 
 void runStictionTest() {
   // --- Test Parameters ---
-  const float start_val = -0.15;                   // Starting voltage for the test
-  const float increment_val = -0.01;                // Voltage step
+  const float start_val = sign*0.15;                   // Starting voltage for the test
+  const float increment_val = sign*0.01;                // Voltage step
   const int   readings_per_step = 40;               // How many angle readings per voltage
   const int   delay_between_readings_ms = 100;     // Wait time between readings
   const float change_val_deg = 3.0;                // Min degrees of movement to detect
@@ -41,7 +42,7 @@ void runStictionTest() {
   enableIsrPrinting = false; // Disable ISR printing for clean, plottable output
 
   // --- POSITIVE DIRECTION TEST ---
-  Serial.println("\n--- Testing POSITIVE stiction ---");
+  Serial.println("\n--- Testing stiction ---");
   Serial.println("(Voltage, Angle)"); // Header for CSV data
   setMotorVoltage(0.0f);
   delay(1000); // Wait for motor to settle
