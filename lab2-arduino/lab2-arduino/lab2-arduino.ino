@@ -25,7 +25,7 @@ struct LogBook {
   double current_angle;
   int trial_num;
   double trial_value;
-  int u_actual;
+  double u_actual;
 };
 
 volatile LogBook new_data;
@@ -43,7 +43,7 @@ void printLogBook(LogBook data){
     Serial.print(",");
     Serial.print(data.trial_value); //initial reference angle again for some reason
     Serial.print(",");
-    Serial.println(data.u_actual); //controller output
+    Serial.println(data.u_actual, 5); //controller output
 }
 
 
@@ -122,7 +122,7 @@ float open_loop_voltage;                    // Default for open-loop mode
 float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
-bool autostep = false;
+bool autostep = true;
 
 // =============== State setup ===============
 enum ControlMode{
@@ -186,7 +186,7 @@ void startTest(float userInput){
       }
 
       Serial.println("==============================================================================");
-      Serial.println("Time (ms),Original Ref (V or rad),Final Ref (V or rad),Angle (rad),TrialCount,TrialValue,Raw Sensor");
+      Serial.println("Time (ms),Original Ref (rad),Final Ref (rad),Angle (rad),TrialNum,TrialValue,U_Actual (V)");
       
       i = 0;
       currentState = RUNNING_TEST;
