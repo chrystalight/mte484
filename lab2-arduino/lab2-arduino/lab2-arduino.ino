@@ -26,6 +26,7 @@ struct LogBook {
   int trial_num;
   double trial_value;
   double u_actual;
+  double ball_raw;
 };
 
 volatile LogBook new_data;
@@ -43,7 +44,9 @@ void printLogBook(LogBook data){
     Serial.print(",");
     Serial.print(data.trial_value); //initial reference angle again for some reason
     Serial.print(",");
-    Serial.println(data.u_actual, 5); //controller output
+    Serial.print(data.u_actual, 5); //controller output
+    Serial.print(",");
+    Serial.println(data.ball_raw);
 }
 
 
@@ -127,7 +130,8 @@ bool autostep = true;
 // =============== State setup ===============
 enum ControlMode{
   STEP_INPUT = 1,
-  SINE_INPUT = 2
+  SINE_INPUT = 2,
+  CALIBRATE_BALL = 3
 };
 
 enum ProgramState { 
@@ -200,9 +204,12 @@ void startTest(float userInput){
         Serial.print(frequency_hz, 2);
         Serial.println(" Hz");
       }
+      else if(input_mode == CALIBRATE_BALL){
+        target_angle = 0;
+      }
 
       Serial.println("==============================================================================");
-      Serial.println("Time (ms),Original Ref (rad),Final Ref (rad),Angle (rad),TrialNum,TrialValue,U_Actual (V)");
+      Serial.println("Time (ms),Original Ref (rad),Final Ref (rad),Angle (rad),TrialNum,TrialValue,U_Actual (V),Ball");
       
       i = 0;
       currentState = RUNNING_TEST;
@@ -325,6 +332,7 @@ void interval_control_code(void) {
 
   // ---- Read sensor ----
   int motor_raw = analogRead(MOT_PIN);
+  int ball_raw = analogRead(BAL_PIN);
   double current_angle = map_potentiometer(motor_raw);
 
   // ---- Closed Loop Control Logic ----
@@ -392,6 +400,7 @@ void interval_control_code(void) {
     new_data.trial_num = trial_num;
     new_data.trial_value = trial_value;
     new_data.u_actual = U_comped;
+    new_data.ball_raw = ball_raw;
 
     data_alarm = true;
 
