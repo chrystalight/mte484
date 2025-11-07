@@ -50,7 +50,7 @@ disp('Example: To get all data for Trial 1, use allTrialsData{1}');
 % --- 3. Example: Analyze and Plot a SINGLE Trial (e.g., Trial 3) ---
 
 % Change this to plot a different trial
-trialToPlot = 3;
+trialToPlot = 2;
 
 if trialToPlot > numTrials
     fprintf('Error: Trial %d does not exist. Plotting trial 1 instead.\n', trialToPlot);
@@ -90,6 +90,22 @@ yline(-6, 'r--', 'LineWidth', 1.5);
 yline(6, 'r--', 'LineWidth', 1.5);
 legend('U\_actual (V)', 'Voltage Limit', 'Location', 'best');
 
+% --- NEW PLOT: Show raw vs. filtered angle for the single trial ---
+windowSize_plot = 10; % Use the same window size as in settling calc
+angle_filtered_plot = movmean(angle, windowSize_plot);
+
+figure;
+plot(t_ms, angle, 'Color', [0.5 0.5 0.5], 'DisplayName', 'Raw Angle');
+hold on;
+plot(t_ms, angle_filtered_plot, 'b-', 'LineWidth', 1.5, 'DisplayName', 'Filtered Angle (5-sample avg)');
+plot(t_ms, ref_fin, 'r--', 'LineWidth', 1.5, 'DisplayName', 'Final Ref');
+grid on;
+xlabel('Time (ms)');
+ylabel('Radians');
+title(sprintf('Trial %d: Raw vs. Filtered Angle (Noise Smoothing)', trialToPlot));
+legend('show', 'Location', 'best');
+
+
 
 % --- 4. Example: Plot all trials overlaid (with resetting time) ---
 figure;
@@ -111,3 +127,64 @@ xlabel('Time (ms)');
 ylabel('Angle (rad)');
 title('All Trials Plotted Individually (Time Resets)');
 legend('show', 'Location', 'best');
+
+% --- 5. Calculate 2% Settling Time for Each Trial ---
+
+fprintf('\n--- Calculating 2%% Settling Times ---\n');
+fprintf('Using a 5-sample moving average filter to reduce noise.\n');
+
+% Create an array to store settling times
+settlingTimes = zeros(numTrials, 1);
+windowSize = 10; % Moving average window size. Adjust if noise is still an issue.
+
+for i = 1:numTrials
+    % Get data for the current trial
+    trialData = allTrialsData{i};
+    
+    t_ms    = trialData(:, 1);
+    ref_fin = trialData(:, 3);
+    angle   = trialData(:, 4);
+    
+    angle_filtered = movmean(angle, windowSize);
+    
+    % Get final (steady-state) value and initial value
+    final_value = ref_fin(1);
+    initial_value = angle_filtered(1); % Use the first *filtered* angle as initial
+    
+    % Calculate the total step magnitude
+    step_magnitude = abs(final_value - initial_value);
+    
+    if step_magnitude < 1e-6 % Handle case where step is (basically) zero
+        settling_time_ms = 0;
+    else
+        % Define the 2% settling band
+        upper_band = final_value + 0.02 * step_magnitude;
+        lower_band = final_value - 0.02 * step_magnitude;
+        
+        % Find all time points *OUTSIDE* the 2% band
+        is_outside_band = (angle_filtered > upper_band) | (angle_filtered < lower_band);
+        
+        % Find the *last index* where the angle was outside the band
+        last_outside_index = find(is_outside_band, 1, 'last');
+        
+        if isempty(last_outside_index)
+            % Never went outside the band (or started inside and stayed)
+            settling_time_ms = 0;
+        elseif last_outside_index == length(t_ms)
+            % The very last point was outside, so it never settled
+            settling_time_ms = Inf;
+        else
+            % The settling time is the time of the *next* sample
+            % after the last time it was outside.
+            settling_time_ms = t_ms(last_outside_index + 1);
+        end
+    end
+    
+    settlingTimes(i) = settling_time_ms;
+    fprintf('Trial %d: Settling Time = %.0f ms\n', uniqueTrials(i), settling_time_ms);
+end
+
+% Display the results in a table
+disp('--- Settling Time Summary (ms) ---');
+T = table(uniqueTrials, settlingTimes, 'VariableNames', {'Trial', 'SettlingTime_ms'});
+disp(T);
