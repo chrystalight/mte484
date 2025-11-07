@@ -114,6 +114,11 @@ const double b_coeffs[N_POLES] = {
   0.000008696897701,
 }; //coefficients on the denominator of D
 
+// ========== For Filtering ===============
+const double FILTER_ALPHA = 0.2; 
+double filtered_mot_raw;
+double filtered_bal_raw;
+
 // ========== For testing /input generation ==========
 
 // --- Sin Parameters ---
@@ -259,8 +264,11 @@ void setup() {
   set_control_interval_ms(T);
   setMotorVoltage(0);
 
+  //prime variables so that we don't get wonky results 
   fillQueueWithZero(u_queue, N_POLES);
   fillQueueWithZero(e_queue, N_ZEROS);
+  filtered_mot_raw = analogRead(MOT_PIN);
+  filtered_bal_raw = analogRead(BAL_PIN);
 
   Serial.println("==================================================");
 
@@ -330,11 +338,15 @@ void interval_control_code(void) {
     return;
   }
 
-  // ---- Read sensor ----
   int motor_raw = analogRead(MOT_PIN);
   int ball_raw = analogRead(BAL_PIN);
-  double current_angle = map_potentiometer(motor_raw);
 
+  // Apply Exponential Moving Average (EMA) filter
+  filtered_mot_raw = (FILTER_ALPHA * motor_raw) + ((1.0 - FILTER_ALPHA) * filtered_mot_raw); //filtered_mot_raw holds the most recent value
+  filtered_bal_raw = (FILTER_ALPHA * ball_raw) + ((1.0 - FILTER_ALPHA) * filtered_bal_raw); //filtered_bal_raw holds the most recent value
+
+  // ---- Read sensor ----
+  double current_angle = map_potentiometer(filtered_mot_raw);
   // ---- Closed Loop Control Logic ----
 
   double ref;
