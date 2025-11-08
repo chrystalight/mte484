@@ -13,7 +13,7 @@ const int BAL_PIN = A1;   // ball position sensor
 const int T = 5;                                  // Sampling time in MS
 const float stiction_offset_neg = -0.54;
 const float stiction_offset_pos = 0.08;
-const int max_T = 5000;                          // Test duration in MS
+const int max_T = 500000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
 // ========== For Logging =============
@@ -46,7 +46,7 @@ void printLogBook(LogBook data){
     Serial.print(",");
     Serial.print(data.u_actual, 5); //controller output
     Serial.print(",");
-    Serial.println(data.ball_raw);
+    Serial.println(data.ball_raw); //ball position (raw)
 }
 
 
@@ -130,13 +130,14 @@ float open_loop_voltage;                    // Default for open-loop mode
 float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
-bool autostep = true;
+bool autostep = false;
 
 // =============== State setup ===============
 enum ControlMode{
   STEP_INPUT = 1,
   SINE_INPUT = 2,
-  CALIBRATE_BALL = 3
+  CALIBRATE_BALL = 3,
+  ISR_TIMING_TEST = 4
 };
 
 enum ProgramState { 
@@ -145,7 +146,7 @@ enum ProgramState {
   TEST_COMPLETE = 3
 };
 
-int input_mode = STEP_INPUT;
+int input_mode = CALIBRATE_BALL;
 
 volatile int currentState = WAIT_FOR_INPUT;
 volatile int i = 0;
@@ -154,8 +155,11 @@ double trial_value = -1; //mode-dependent, eg. step magnitude
 volatile int trial_num = 1; // 1-indexed because matlab
 
 //=================== Potentiometer Calibrations ====
-const int motor_pot_min = 565;
-const int motor_pot_max = 455;
+// const int motor_pot_min = 565;
+// const int motor_pot_max = 455;
+// VALUES FOR STATION 12!!!!! *NOT* 13!!!!
+const int motor_pot_min = 443;
+const int motor_pot_max = 336;
 const double motor_pot_slope = M_PI / (2.0 * (motor_pot_max - motor_pot_min));
 const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
 
@@ -402,6 +406,9 @@ void interval_control_code(void) {
       U_comped = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
     }
 
+    if (input_mode == ISR_TIMING_TEST) {
+      U_comped = (i % 2) * 5; //alternate 
+    }
     setMotorVoltage(U_comped);
   
   // ---- log data ----
