@@ -2,7 +2,7 @@
 %%%IT GETS RID OF ALL OF THE TEXT AND THEN 'UNWRAPS' THE TIME SIGNAL TO BE
 %%%ONE LONG TEST
 
-fname = 'RealControllerLogs.txt';  % <-- change to your file name
+fname = 'RealControllerLogs.txt';  % 
 
 L = readlines(fname);
 isData = ~cellfun(@isempty, regexp(L, '^\s*\d', 'once'));  % rows that begin with a number

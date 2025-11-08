@@ -2,8 +2,16 @@
 #include "geeWhiz.h"
 #include <cppQueue.h>
 
-#define N_ZEROS 26
-#define N_POLES 27
+
+//for STATION 13: 
+//#define N_ZEROS 26
+//#define N_POLES 27
+//const int STATION_NUM = 13; 
+
+//for STATION 12:
+#define N_ZEROS 24
+#define N_POLES 25
+const int STATION_NUM = 12; 
 
 // ========== Pins ==========
 const int MOT_PIN = A0;   // motor angle sensor
@@ -52,10 +60,13 @@ void printLogBook(LogBook data){
 
 //========== For Controller Implementation ==========
 #define	IMPLEMENTATION FIFO
+
 cppQueue u_queue(sizeof(double), N_POLES, IMPLEMENTATION, true); //true to enable overwriting
 cppQueue e_queue(sizeof(double), N_ZEROS, IMPLEMENTATION, true);
+const double* a_coeffs;
+const double* b_coeffs;
 
-const double a_coeffs[N_ZEROS] = {
+const double a_coeffs_13[26] = {
   -4.014671308410470,
   6.595993799639460,
   -3.837648018627513,
@@ -84,7 +95,7 @@ const double a_coeffs[N_ZEROS] = {
   0.004242677516370,
 }; // coefficients on the numerator of D
 
-const double b_coeffs[N_POLES] = {
+const double b_coeffs_13[27] = {
   1.000000000000000,
   -1.642984519812282,
   0.958321968432410,
@@ -114,6 +125,60 @@ const double b_coeffs[N_POLES] = {
   0.000008696897701,
 }; //coefficients on the denominator of D
 
+const double a_coeffs_12[24] = {
+   3.202514621083537,
+  -4.850224482639266,
+   2.416024408545324,
+  -0.212847430192880,
+  -0.028989501923688,
+   0.060439898641832,
+   0.034253271246125,
+   0.034632169652408,
+   0.034064273291039,
+   0.042682683693496,
+   0.035488589185325,
+   0.053165135000975,
+   0.017838740264721,
+   0.037876854795247,
+   0.040532039423594,
+   0.037821079266218,
+   0.040073131126908,
+   0.035152836361889,
+  -0.435700007849979,
+   0.972487391491639,
+  -0.324433819811870,
+  -0.527882343393414,
+   0.931902585643497,
+  -0.654129594424024,
+}; // coefficients on the numerator of D
+
+const double b_coeffs_12[25] = {
+   1.000000000000000,
+  -1.514373454883820,
+   0.751747880713601,
+  -0.069707647860514,
+  -0.011286893018807,
+   0.015936501638972,
+   0.007361160757791,
+   0.007004369403117,
+   0.006099674082183,
+   0.008844212906579,
+   0.006217724944567,
+   0.010522698373411,
+   0.000356225471464,
+   0.005381233935217,
+   0.005445719394046,
+   0.004384858216212,
+   0.003883479400783,
+   0.003446103609769,
+   0.003005770506565,
+   0.002562775625260,
+   0.002535817206579,
+   0.002019775457137,
+   0.001126440068917,
+   0.001012971739118,
+   0.000561335528298,
+}; //coefficients on the denominator of D
 // ========== For Filtering ===============
 const double FILTER_ALPHA = 0.2; 
 double filtered_mot_raw;
@@ -267,6 +332,15 @@ void setup() {
   geeWhizBegin();
   set_control_interval_ms(T);
   setMotorVoltage(0);
+
+  if(STATION_NUM == 12){
+    a_coeffs = a_coeffs_12;
+    b_coeffs = b_coeffs_12;
+  }
+  else if(STATION_NUM == 13){
+    a_coeffs = a_coeffs_13;
+    b_coeffs = b_coeffs_13;
+  }
 
   //prime variables so that we don't get wonky results 
   fillQueueWithZero(u_queue, N_POLES);
