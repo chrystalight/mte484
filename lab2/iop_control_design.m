@@ -10,13 +10,15 @@
 
 load('pruned_poles.mat')
 load('prunder_poles.mat')
+load('prunedest_poles.mat')
 T = 0.004;
-k_1 = -2.288
-tau = 0.029
+%k_1 = -2.288 Station 13 value
+%tau = 0.029 Station 13 value
 
+k_1 = -2.691
+tau = 0.028
 s = tf('s')
 P = k_1/(s*(s*tau+1))
-
 G = c2d(P, T, 'zoh')
 
 [num, den] = tfdata(G, 'v');
@@ -29,14 +31,16 @@ center = 0;
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
 
 j = sqrt(-1);
-stableRealPlantPoles = [0.8712];
+%stableRealPlantPoles = [0.8712]; %Station 13 Value
+stableRealPlantPoles = [0.8669] %Station 12 Value
 stableComplexPlantPoles = [];
 unstablePlantPoles = [1.00]; 
 stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
-cs = [0.0098, -0.0092];
+%cs = [0.0098, -0.0092]; %Station 13 Value
+cs = [-0.0108, 0.0116] %Station 12 Value
 
 n = length(qs);
 nhat = length(stablePlantPoles);
