@@ -18,10 +18,10 @@ const int MOT_PIN = A0;   // motor angle sensor
 const int BAL_PIN = A1;   // ball position sensor
 
 // ========== System Parameters ==========
-const int T = 5;                                  // Sampling time in MS
+const int T = 4;                                  // Sampling time in MS
 const float stiction_offset_neg = -0.54;
 const float stiction_offset_pos = 0.08;
-const int max_T = 500000;                          // Test duration in MS
+const int max_T = 5000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
 // ========== For Logging =============
@@ -126,30 +126,30 @@ const double b_coeffs_13[27] = {
 }; //coefficients on the denominator of D
 
 const double a_coeffs_12[24] = {
-   3.202514621083537,
-  -4.850224482639266,
-   2.416024408545324,
-  -0.212847430192880,
-  -0.028989501923688,
-   0.060439898641832,
-   0.034253271246125,
-   0.034632169652408,
-   0.034064273291039,
-   0.042682683693496,
-   0.035488589185325,
-   0.053165135000975,
-   0.017838740264721,
-   0.037876854795247,
-   0.040532039423594,
-   0.037821079266218,
-   0.040073131126908,
-   0.035152836361889,
-  -0.435700007849979,
-   0.972487391491639,
-  -0.324433819811870,
-  -0.527882343393414,
-   0.931902585643497,
-  -0.654129594424024,
+  -3.202514621083537,
+   4.850224482639266,
+  -2.416024408545324,
+   0.212847430192880,
+   0.028989501923688,
+  -0.060439898641832,
+  -0.034253271246125,
+  -0.034632169652408,
+  -0.034064273291039,
+  -0.042682683693496,
+  -0.035488589185325,
+  -0.053165135000975,
+  -0.017838740264721,
+  -0.037876854795247,
+  -0.040532039423594,
+  -0.037821079266218,
+  -0.040073131126908,
+  -0.035152836361889,
+   0.435700007849979,
+  -0.972487391491639,
+   0.324433819811870,
+   0.527882343393414,
+  -0.931902585643497,
+   0.654129594424024,
 }; // coefficients on the numerator of D
 
 const double b_coeffs_12[25] = {
@@ -195,7 +195,7 @@ float open_loop_voltage;                    // Default for open-loop mode
 float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
-bool autostep = false;
+bool autostep = true;
 
 // =============== State setup ===============
 enum ControlMode{
@@ -211,7 +211,7 @@ enum ProgramState {
   TEST_COMPLETE = 3
 };
 
-int input_mode = CALIBRATE_BALL;
+int input_mode = STEP_INPUT;
 
 volatile int currentState = WAIT_FOR_INPUT;
 volatile int i = 0;
@@ -220,11 +220,14 @@ double trial_value = -1; //mode-dependent, eg. step magnitude
 volatile int trial_num = 1; // 1-indexed because matlab
 
 //=================== Potentiometer Calibrations ====
+// // station 13
 // const int motor_pot_min = 565;
 // const int motor_pot_max = 455;
-// VALUES FOR STATION 12!!!!! *NOT* 13!!!!
+
+// station 12
 const int motor_pot_min = 443;
 const int motor_pot_max = 336;
+
 const double motor_pot_slope = M_PI / (2.0 * (motor_pot_max - motor_pot_min));
 const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
 
@@ -481,7 +484,9 @@ void interval_control_code(void) {
     }
 
     if (input_mode == ISR_TIMING_TEST) {
-      U_comped = (i % 2) * 5; //alternate 
+      // perform all the calculations above, 
+      // but hardcode the output voltage to alternate between 0 and 5
+      U_comped = (i % 2) * 5;
     }
     setMotorVoltage(U_comped);
   
