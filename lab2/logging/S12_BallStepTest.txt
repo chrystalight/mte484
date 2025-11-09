@@ -5480,9 +5480,3 @@ Please enter a new step magnitude to run another test:
 4988,0.70000,0.70000,0.69732,5,0.70,-0.56207,6.00
 4992,0.70000,0.70000,0.69732,5,0.70,-0.55634,30.00
 4996,0.70000,0.70000,0.71200,5,0.70,0.11573,27.00
-==============================================================================
-Test complete.
-
- You're finished!!! Returning to normal operation now
-
-Please enter a new step magnitude to run another test:

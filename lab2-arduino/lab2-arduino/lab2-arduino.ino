@@ -180,7 +180,11 @@ const double b_coeffs_12[25] = {
    0.000561335528298,
 }; //coefficients on the denominator of D
 // ========== For Filtering ===============
-const double FILTER_ALPHA = 0.2; 
+volatile int g_latestBalValue;
+const int MIN_BAL_READING = 300;
+const int MAX_BAL_READING = 900;
+const double FILTER_ALPHA_MOTOR = 0.2; 
+const double FILTER_ALPHA_BALL = 0.6;
 double filtered_mot_raw;
 double filtered_bal_raw;
 
@@ -335,6 +339,7 @@ void setup() {
   geeWhizBegin();
   set_control_interval_ms(T);
   setMotorVoltage(0);
+  g_latestBalValue = analogRead(BAL_PIN);
 
   if(STATION_NUM == 12){
     a_coeffs = a_coeffs_12;
@@ -403,6 +408,15 @@ void loop() {
       endTest();
       break;  
   }
+
+  //oversample at whatever rate this loop runs at, protect the value from being read while its being written
+  int newSample = analogRead(BAL_PIN);
+  if (newSample > MIN_BAL_READING && newSample < MAX_BAL_READING) {
+    float newAverage = (FILTER_ALPHA_BALL * (float)newSample) + ((1.0 - FILTER_ALPHA_BALL) * g_latestBalValue);
+    noInterrupts();
+    g_latestBalValue = newAverage;
+    interrupts();
+  }
 }
 
 // ================== Control ISR ==================
@@ -420,18 +434,13 @@ void interval_control_code(void) {
   }
 
   int motor_raw = analogRead(MOT_PIN);
-  int ball_raw = analogRead(BAL_PIN);
-
+  int filtered_bal_raw = g_latestBalValue;
   // Apply Exponential Moving Average (EMA) filter
-  filtered_mot_raw = (FILTER_ALPHA * motor_raw) + ((1.0 - FILTER_ALPHA) * filtered_mot_raw); //filtered_mot_raw holds the most recent value
-  filtered_bal_raw = (FILTER_ALPHA * ball_raw) + ((1.0 - FILTER_ALPHA) * filtered_bal_raw); //filtered_bal_raw holds the most recent value
-
+  filtered_mot_raw = (FILTER_ALPHA_MOTOR * motor_raw) + ((1.0 - FILTER_ALPHA_MOTOR) * filtered_mot_raw); //filtered_mot_raw holds the most recent value
   // ---- Read sensor ----
   double current_angle = map_potentiometer(filtered_mot_raw);
   // ---- Closed Loop Control Logic ----
-
   double ref;
-
   // ---- Control Logic based on Mode ----
     if (input_mode == STEP_INPUT) {
       ref = target_angle;
@@ -498,7 +507,7 @@ void interval_control_code(void) {
     new_data.trial_num = trial_num;
     new_data.trial_value = trial_value;
     new_data.u_actual = U_comped;
-    new_data.ball_raw = ball_raw;
+    new_data.ball_raw = filtered_bal_raw;
 
     data_alarm = true;
 
