@@ -196,7 +196,7 @@ const float amplitude_rad = M_PI / 8.0;
 float step_magnitude_rad;                   // Default for step input mode
 float open_loop_voltage;                    // Default for open-loop mode
 // --- Autostepping --- 
-float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7};
+float rad_mag[] = {0, -0.7, 0, 0.7, 0, -0.7, 0, 0.7};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
 bool autostep = true;
@@ -309,7 +309,6 @@ void endTest(){
         step_index++;
         if (step_index < num_steps) {
             Serial.println("Please wait for the next step to occur.");
-            delay(max_T);
             startTest(-1);
         } else {
             Serial.println("\n You're finished!!! Returning to normal operation now");
