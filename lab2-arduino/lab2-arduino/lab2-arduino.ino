@@ -421,6 +421,8 @@ void loop() {
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
+  //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
+  setMotorVoltage(6);
 
   if (currentState != RUNNING_TEST) {
     return;
@@ -512,6 +514,8 @@ void interval_control_code(void) {
     data_alarm = true;
 
     i++;
+    //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
+    setMotorVoltage(0);
 }
 
 
