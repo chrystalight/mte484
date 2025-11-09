@@ -196,7 +196,7 @@ const float amplitude_rad = M_PI / 8.0;
 float step_magnitude_rad;                   // Default for step input mode
 float open_loop_voltage;                    // Default for open-loop mode
 // --- Autostepping --- 
-float rad_mag[] = {0, -0.7, 0, 0.7, 0, -0.7, 0, 0.7};
+float rad_mag[] = {0, -0.7, 0.7, -0.7, 0.7, -0.7, 0.7, 0, 0, -0.6, 0.6, -0.6, 0.6, -0.6, 0.6, 0, 0, -0.4, 0.4, -0.4, 0.4, -0.4, 0.4, 0, 0, -0.3, 0.3, -0.3, 0.3, -0.3, 0.3, 0, 0, -0.2, 0.2, -0.2, 0.2, -0.2, 0.2, 0, 0, -0.1, 0.1, -0.1, 0.1, -0.1, 0.1, 0};
 int num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
 int step_index = 0;
 bool autostep = true;
