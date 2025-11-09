@@ -391,21 +391,22 @@ void loop() {
     interrupts();
     printLogBook(curr_data);
   }
+  else{
+    switch(currentState){
+      case RUNNING_TEST:
+        break;
+      case WAIT_FOR_INPUT: 
+        if (Serial.available() > 0) {
+          float userInput = Serial.parseFloat();
+          while (Serial.available() > 0) { Serial.read(); }
+          startTest(userInput);
+        }
+        break;
 
-  switch(currentState){
-    case RUNNING_TEST:
-      break;
-    case WAIT_FOR_INPUT: 
-      if (Serial.available() > 0) {
-        float userInput = Serial.parseFloat();
-        while (Serial.available() > 0) { Serial.read(); }
-        startTest(userInput);
-      }
-      break;
-
-    case TEST_COMPLETE:
-      endTest();
-      break;  
+      case TEST_COMPLETE:
+        endTest();
+        break;  
+    }
   }
 
   //oversample at whatever rate this loop runs at, protect the value from being read while its being written
