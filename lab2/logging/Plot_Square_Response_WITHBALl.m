@@ -5,6 +5,8 @@ fname = 'S12_Final.txt';  %
 
 [t_ms, ref_orig, ref_fin, angle, TRIALNUM, TRIALVALUE, U_actual, ball] = importsinefile(fname);
 t_ms = unwrap(t_ms, 4996);
+% Apply a 5-sample median filter to the 'ball' data to remove spikes
+ball_filtered = medfilt1(ball, 5); % You can change '5' to any odd number
 
 
 % Time (ms), Original Ref (rad), Final Ref (rad), Angle (rad), TrialNum, TrialValue, U_Actual (V)
@@ -13,6 +15,7 @@ figure;
 plot(t_ms, angle, 'LineWidth', 1.2); hold on;
 plot(t_ms, ref_fin, 'LineWidth', 1.2);
 plot(t_ms, ball/100, 'LineWidth', 1.2);
+plot(t_ms, ball_filtered/100, 'LineWidth', 1.2);
 grid on;
 xlabel('Time (ms)');
 ylabel('Radians');
@@ -30,9 +33,5 @@ title('U\_actual vs Time');
 yline(-6)
 yline(6)
 
-% --- Y_ss --- 
-for c = 1:4
-    segment = angle((2500+5000*c)/5:(4990+5000*c)/5);
-    y_ss(c) = mean(segment)
-end
+
 
