@@ -37,8 +37,11 @@ opts.VariableNames = ["Timems", "OriginalRefrad", "FinalRefrad", "Anglerad", "Tr
 opts.VariableTypes = ["double", "double", "double", "double", "double", "double", "double", "double"];
 
 % Specify file level properties
+opts.ImportErrorRule = "omitrow";
+opts.MissingRule = "omitrow";
 opts.ExtraColumnsRule = "ignore";
 opts.EmptyLineRule = "read";
+
 
 % Import the data
 tbl = readtable(filename, opts);
