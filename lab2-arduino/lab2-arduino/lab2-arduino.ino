@@ -35,6 +35,7 @@ struct LogBook {
   double trial_value;
   double u_actual;
   double ball_raw;
+  int loop_cnt;
 };
 
 volatile LogBook new_data;
@@ -54,9 +55,11 @@ void printLogBook(LogBook data){
     Serial.print(",");
     Serial.print(data.u_actual, 5); //controller output
     Serial.print(",");
-    Serial.println(data.ball_raw); //ball position (raw)
+    Serial.print(data.ball_raw); //ball position (raw)
+    Serial.print(",");
+    Serial.println(data.loop_cnt);
 }
-
+volatile int loop_cnt;
 
 //========== For Controller Implementation ==========
 #define	IMPLEMENTATION FIFO
@@ -415,16 +418,14 @@ void loop() {
     float newAverage = (FILTER_ALPHA_BALL * (float)newSample) + ((1.0 - FILTER_ALPHA_BALL) * g_latestBalValue);
     noInterrupts();
     g_latestBalValue = newAverage;
+    loop_cnt++;
     interrupts();
   }
 }
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
-  //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
-  setMotorVoltage(6);
-
-  if (currentState != RUNNING_TEST) {
+   if (currentState != RUNNING_TEST) {
     return;
   }
   
@@ -510,12 +511,13 @@ void interval_control_code(void) {
     new_data.trial_value = trial_value;
     new_data.u_actual = U_comped;
     new_data.ball_raw = filtered_bal_raw;
+    new_data.loop_cnt = loop_cnt;
 
     data_alarm = true;
 
     i++;
-    //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
-    setMotorVoltage(0);
+    loop_cnt = 0;
+
 }
 
 
