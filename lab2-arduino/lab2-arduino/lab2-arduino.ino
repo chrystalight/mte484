@@ -21,7 +21,7 @@ const int BAL_PIN = A1;   // ball position sensor
 const int T = 4;                                  // Sampling time in MS
 const float stiction_offset_neg = -0.54;
 const float stiction_offset_pos = 0.08;
-const int max_T = 5000;                          // Test duration in MS
+const int max_T = 50000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
 // ========== For Logging =============
@@ -35,7 +35,6 @@ struct LogBook {
   double trial_value;
   double u_actual;
   double ball_raw;
-  int loop_cnt;
 };
 
 volatile LogBook new_data;
@@ -55,11 +54,9 @@ void printLogBook(LogBook data){
     Serial.print(",");
     Serial.print(data.u_actual, 5); //controller output
     Serial.print(",");
-    Serial.print(data.ball_raw); //ball position (raw)
-    Serial.print(",");
-    Serial.println(data.loop_cnt);
+    Serial.println(data.ball_raw); //ball position (raw)
 }
-volatile int loop_cnt;
+
 
 //========== For Controller Implementation ==========
 #define	IMPLEMENTATION FIFO
@@ -241,8 +238,9 @@ const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
 
 double ball_pos_1 = 0.1; //meters
 double ball_pos_2 = 0.25; //meters
-double ball_reading_1 = 0; //sensor output @ 0.1 m
-double ball_reading_2 = 0; //sensor output @ 0.25 m
+//STATION 12 VALUES
+double ball_reading_1 = 395; //sensor output @ 0.1 m
+double ball_reading_2 = 545; //sensor output @ 0.25 m
 
 
 double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1);
@@ -418,14 +416,14 @@ void loop() {
     float newAverage = (FILTER_ALPHA_BALL * (float)newSample) + ((1.0 - FILTER_ALPHA_BALL) * g_latestBalValue);
     noInterrupts();
     g_latestBalValue = newAverage;
-    loop_cnt++;
     interrupts();
   }
 }
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
-   if (currentState != RUNNING_TEST) {
+
+  if (currentState != RUNNING_TEST) {
     return;
   }
   
@@ -511,13 +509,10 @@ void interval_control_code(void) {
     new_data.trial_value = trial_value;
     new_data.u_actual = U_comped;
     new_data.ball_raw = filtered_bal_raw;
-    new_data.loop_cnt = loop_cnt;
 
     data_alarm = true;
 
     i++;
-    loop_cnt = 0;
-
 }
 
 
