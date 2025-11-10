@@ -21,7 +21,7 @@ const int BAL_PIN = A1;   // ball position sensor
 const int T = 4;                                  // Sampling time in MS
 const float stiction_offset_neg = -0.54;
 const float stiction_offset_pos = 0.08;
-const int max_T = 5000;                          // Test duration in MS
+const int max_T = 50000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
 // ========== For Logging =============
@@ -238,8 +238,9 @@ const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
 
 double ball_pos_1 = 0.1; //meters
 double ball_pos_2 = 0.25; //meters
-double ball_reading_1 = 0; //sensor output @ 0.1 m
-double ball_reading_2 = 0; //sensor output @ 0.25 m
+//STATION 12 VALUES
+double ball_reading_1 = 395; //sensor output @ 0.1 m
+double ball_reading_2 = 545; //sensor output @ 0.25 m
 
 
 double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1);
@@ -421,8 +422,6 @@ void loop() {
 
 // ================== Control ISR ==================
 void interval_control_code(void) {
-  //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
-  setMotorVoltage(6);
 
   if (currentState != RUNNING_TEST) {
     return;
@@ -514,8 +513,6 @@ void interval_control_code(void) {
     data_alarm = true;
 
     i++;
-    //DETELE THIS LINE WHEN YOU'RE NOT DOING THE TEST THIS IS JUST FOR THE OSCILLISCOPE IM SO SERVIOUS RN DONT LEAVE THIS HERE
-    setMotorVoltage(0);
 }
 
 
