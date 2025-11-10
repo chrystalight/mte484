@@ -1,0 +1,20 @@
+flowchart LR
+    ref_gen[Reference Generator] --reference[radians]--> saturator[Saturator];
+    saturator -- saturated_ref[radians]--> summing_junction_1((Summing Junction));
+    summing_junction_1 --e[rad]--> kp[Kp];
+    kp --u[V]--> stiction_comp[Stiction Compensation];
+    stiction_comp --u_compensated[V]--> h_t[H_T];
+    h_t --V[v]--> servomotor_plant["Servomotor Plant, K1/(s(tau*s+1))"];
+    servomotor_plant --theta[rad]--> invisible[" "];
+    servomotor_plant --theta[rad]--> shaft_coupling((Shaft Coupling));
+    subgraph Gear Angle Potentiometer
+    direction RL
+    shaft_coupling-->shaft_potentiometer[K_pot];
+    offset_potentiometer[Offset Potentiometer]-->shaft_coupling;
+    end
+    shaft_potentiometer --V_pot[v]--> s_t[S_t];
+    s_t --angV[V]--> gain[inverting gain: motor_slope];
+    gain --theta_meas[rad]--> summing_junction_2((Summing Junction));
+    offset_inv[offset: motor_b] --> summing_junction_2;
+    summing_junction_2 --theta_error[rad]-->summing_junction_1;
+    style invisible fill:#ffffff,stroke:#333,stroke-width:0px

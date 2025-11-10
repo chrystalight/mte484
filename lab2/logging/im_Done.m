@@ -5,11 +5,10 @@ clear, clc;
 close all;
 
 fname = 'S12_Final.txt';  % 
-k2 = 2.54/41.7
+
 [t_ms, ref_orig, ref_fin, angle, TRIALNUM, TRIALVALUE, U_actual, ball] = importsinefile(fname);
 t_ms = unwrap(t_ms, 4996);
-%angle = angle*0.2353
-angle = angle*k2
+angle = angle*0.2353
 % Apply a 5-sample median filter to the 'ball' data to remove spikes
 ball_filtered = medfilt1(ball, 33); % You can change '5' to any odd number
 %ball_max_filtered = movmax(ball, 5);
@@ -39,10 +38,10 @@ title('U\_actual vs Time');
 yline(-6)
 yline(6)
 
-min_pot = 395;
-max_pot = 545; 
+min_pot = 300;
+max_pot = 700; 
 
-ball = (ball_filtered - min_pot) * (0.415 / (max_pot - min_pot));  % linear mapping 0–41.5 cm
+ball = (ball_filtered - min_pot) * (41.5 / (max_pot - min_pot));  % linear mapping 0–41.5 cm
 
 
 
@@ -147,27 +146,41 @@ segment_length_0_6 = 400;
 title_0_6 = '0.6 Rad (Positive) Step Response';
 title_0_6_neg = '0.6 Rad (Negative) Step Response';
 
-%% --- PROCESS POSITIVE STEPS ---
+%% --- CREATE MASTER FIGURE FOR ALL STEP RESPONSES ---
+step_titles = {
+    '1.2 Radian (Positive) Step Response', '1.2 Radian (Negative) Step Response', ...
+    '1.0 Radian (Positive) Step Response', '1.0 Radian (Negative) Step Response', ...
+    '0.8 Radian (Positive) Step Response', '0.8 Radian (Negative) Step Response', ...
+    '0.6 Radian (Positive) Step Response', '0.6 Radian (Negative) Step Response'};
 
-[step_1_2_data] = plotAndExtractSegments(start_indices_1_2, ...
-    segment_length_1_2, title_1_2, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[step_1_0_data] = plotAndExtractSegments(start_indices_1_0, ...
-    segment_length_1_0, title_1_0, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[step_0_8_data] = plotAndExtractSegments(start_indices_0_8, ...
-    segment_length_0_8, title_0_8, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[step_0_6_data] = plotAndExtractSegments(start_indices_0_6, ...
-    segment_length_0_6, title_0_6, angle, ball, ball_velocity_sg, ball_acceleration_sg);
+num_plots = numel(step_titles);
+cols = 2;
+rows = ceil(num_plots / cols);
 
-%% --- PROCESS NEGATIVE STEPS ---
+allStepsFig = figure('Name', 'All Step Responses', 'Units', 'normalized', ...
+                     'Position', [0.05 0.05 0.9 0.9]);
 
-[neg_step_1_2_data] = plotAndExtractSegments(neg_start_indices_1_2, ...
-    segment_length_1_2+50, title_1_2_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[neg_step_1_0_data] = plotAndExtractSegments(neg_start_indices_1_0, ...
-    segment_length_1_0, title_1_0_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[neg_step_0_8_data] = plotAndExtractSegments(neg_start_indices_0_8, ...
-    segment_length_0_8, title_0_8_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg);
-[neg_step_0_6_data] = plotAndExtractSegments(neg_start_indices_0_6, ...
-    segment_length_0_6, title_0_6_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg);
+plot_idx = 1;
+
+% Helper anonymous function to create subplot axes and call plotting
+plotStep = @(start_indices, seg_len, title_str, angle, ball, vel, acc) ...
+    plotAndExtractSegments(start_indices, seg_len, title_str, angle, ball, vel, acc, ...
+                           subplot(rows, cols, plot_idx));
+
+% Positive steps
+plotAndExtractSegments(start_indices_1_2, segment_length_1_2, title_1_2, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+plotAndExtractSegments(neg_start_indices_1_2, segment_length_1_2+50, title_1_2_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+
+plotAndExtractSegments(start_indices_1_0, segment_length_1_0, title_1_0, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+plotAndExtractSegments(neg_start_indices_1_0, segment_length_1_0, title_1_0_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+
+plotAndExtractSegments(start_indices_0_8, segment_length_0_8, title_0_8, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+plotAndExtractSegments(neg_start_indices_0_8, segment_length_0_8, title_0_8_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+
+plotAndExtractSegments(start_indices_0_6, segment_length_0_6, title_0_6, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx)); plot_idx=plot_idx+1;
+plotAndExtractSegments(neg_start_indices_0_6, segment_length_0_6, title_0_6_neg, angle, ball, ball_velocity_sg, ball_acceleration_sg, subplot(rows, cols, plot_idx));
+
+sgtitle('All Step Response Segments (Positive and Negative)');
 
 %% --- CALCULATE POSITIVE STEADY-STATE ACCELERATION (Last 1/3) ---
 % We calculate the mean of the absolute acceleration for the last 1/3
@@ -227,7 +240,7 @@ fprintf('  0.6 Rad (Pos): %.4f  | (Neg): %.4f\n', ss_accel_0_6, ss_accel_0_6_neg
 fprintf('-------------------------------------------\n');
 
 % --- 2. Calculate Final Gain (k3) ---
-rad_col = [1.2, 1.0, 0.8, 0.6]*k2;
+rad_col = [1.2, 1.0, 0.8, 0.6]*0.2353;
 rad_col = rad_col';% Column vector for polyfit
 pos_ss_accel = [ss_accel_1_2, ss_accel_1_0, ss_accel_0_8, ss_accel_0_6]';
 neg_ss_accel = [ss_accel_1_2_neg, ss_accel_1_0_neg, ss_accel_0_8_neg, ss_accel_0_6_neg]';
@@ -241,8 +254,8 @@ k3_gain = p_coeffs(1);
 y_offset = p_coeffs(2);
 
 fprintf('--- Final Gain (k3) from Averaged Data ---\n');
-fprintf('Best-Fit Gain (k3): %.4f (m/s^2) / rad\n', k3_gain);
-fprintf('Y-Intercept (Offset): %.4f (m/s^2)\n', y_offset);
+fprintf('Best-Fit Gain (k3): %.4f (cm/s^2) / rad\n', k3_gain);
+fprintf('Y-Intercept (Offset): %.4f (cm/s^2)\n', y_offset);
 fprintf('--------------------------------------------\n');
 
 % --- 4. Plot Final Gain ---
@@ -260,115 +273,39 @@ plot(rad_fit_line, accel_fit_line, 'k--', 'LineWidth', 2, ...
 
 grid on;
 xlabel('\Phi Step Input Magnitude (rad)');
-ylabel('Mean Steady-State Acceleration (m/s^2)');
+ylabel('Mean Steady-State Acceleration (cm/s^2)');
 title('Steady-State Acceleration vs. \Phi Magnitude');
 legend('Location', 'best');
 hold off;
 
 function [segments_matrix] = plotAndExtractSegments(start_indices, segment_length, figure_title, ...
-    angle, ball, ball_velocity_sg, ball_acceleration_sg)
-
-%
-% INPUTS:
-%   start_indices (vector): Array of start indices for each segment
-%   segment_length (scalar): Length of each segment
-%   figure_title (string): Title for the whole figure
-%
-% OUTPUT:
-%   segments_matrix (3D matrix): [num_segments, 4, segment_length]
-%
-
-% --- Setup ---
-% Access variables from the script's workspace
+    angle, ball, ball_velocity_sg, ball_acceleration_sg, ax)
 
 num_segments = length(start_indices);
-x_relative = 1:segment_length; % A common x-axis
-legend_entries = cell(1, num_segments); 
-
-% Pre-allocate the output 3D matrix
+x_relative = 1:segment_length;
 segments_matrix = zeros(num_segments, 4, segment_length);
 
-% --- Create Figure and Subplots ---
-x = figure; 
-
-% Subplot 1: Angle
-subplot(4, 1, 1);
+axes(ax);  % draw inside passed subplot
 hold on;
-title('Beam Angle');
-ylabel('Angle (rad)');
-grid on;
-
-% Subplot 2: Position
-subplot(4, 1, 2);
-hold on;
-title('Ball Position');
-ylabel('Position (m)');
-grid on;
-
-% Subplot 3: Velocity
-subplot(4, 1, 3);
-hold on;
-title('Ball Velocity');
-ylabel('Velocity (m/s)');
-grid on;
-
-% Subplot 4: Acceleration
-subplot(4, 1, 4);
-hold on;
-title('Ball Acceleration');
-ylabel('Accel (m/s^2)');
-xlabel('K');
-grid on;
-
-% --- Loop, Extract, and Plot ---
 for i = 1:num_segments
     start_idx = start_indices(i);
     end_idx = start_idx + segment_length - 1;
-    
-    if end_idx > length(angle) % Check bounds using 'angle'
+    if end_idx > length(angle)
         warning('Segment starting at %d goes out of bounds. Skipping.', start_idx);
         continue;
     end
-    
     indices = start_idx:end_idx;
-    
-    % --- 1. Extract Data ---
     segments_matrix(i, 1, :) = angle(indices);
     segments_matrix(i, 2, :) = ball(indices);
     segments_matrix(i, 3, :) = ball_velocity_sg(indices);
     segments_matrix(i, 4, :) = ball_acceleration_sg(indices);
-
-    % --- 2. Plot Data ---
-    subplot(4, 1, 1);
-    plot(x_relative, squeeze(segments_matrix(i, 1, :))); 
-    
-    subplot(4, 1, 2);
-    plot(x_relative, squeeze(segments_matrix(i, 2, :))); 
-    
-    subplot(4, 1, 3);
-    plot(x_relative, squeeze(segments_matrix(i, 3, :))); 
-    
-    subplot(4, 1, 4);
-    plot(x_relative, squeeze(segments_matrix(i, 4, :))); 
-    
+    plot(x_relative, squeeze(segments_matrix(i, 1, :)), 'LineWidth', 1.2);
 end
 
-% --- Finalize Plots ---
-subplot(4, 1, 1); 
+title(figure_title, 'Interpreter', 'none');
+xlabel('Sample Index');
+ylabel('Angle (rad)');
+grid on;
 hold off;
-
-subplot(4, 1, 2);
-hold off;
-
-subplot(4, 1, 3);
-hold off;
-
-subplot(4, 1, 4);
-hold off;
-
-sgtitle(figure_title); 
-
-savefig([figure_title+".fig"]);
-saveas(x, [figure_title+".png"]);
-
 end
+
