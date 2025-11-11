@@ -3,13 +3,13 @@ clc
 close all
 load 'poles_B.mat'
 
-attempt_number = 20; 
+attempt_number = 25; 
 load('polesets.mat');
-poleset = prune_8.'
+poleset = prune_11.'
 % set time step
 k_2 = 0.06091;
 k_3 = -4.0162;
-T = 0.25; %%WE HAVE TO PICK A NEW T VALUE
+T = 0.24; %%WE HAVE TO PICK A NEW T VALUE
 
 s = tf('s')
 P = (k_2*k_3)/(s*s)
@@ -265,10 +265,10 @@ end
 
 %% Defining the objective function and constraints for the optimization
 %Objective = 0;
-%Objective = max(step_ru*w);
+Objective = max(step_ru*w);
 %Objective = min(max(step_ru*w));
-Objective_num = 2;
-Objective = norm(step_ru*w, 2); 
+Objective_num = 1;
+%Objective = norm(step_ru*w, 2); 
 
 %objective_num legend:
 %1 --> %Objective = max(step_ru*w);
