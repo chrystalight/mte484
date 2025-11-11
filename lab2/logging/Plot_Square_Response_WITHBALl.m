@@ -1,8 +1,12 @@
 %%%THIS SCRIPT TREATS THE LOG FILE AS ONE CONTINUOUS RESPONSE
 %%%IT GETS RID OF ALL OF THE TEXT AND THEN 'UNWRAPS' THE TIME SIGNAL TO BE
 %%%ONE LONG TEST
+<<<<<<< HEAD
 clear, clc;
 close all;
+=======
+fname = 'S12_New_BallStep_alpha06.txt';  % 
+>>>>>>> 930149a4ad8ee7e4205ffb1ed00f841b43d45db2
 
 fname = 'S12_Final.txt';  % 
 k2 = 2.54/41.7

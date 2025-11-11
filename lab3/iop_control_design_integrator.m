@@ -2,6 +2,8 @@ clear
 clc
 load 'poles_B.mat'
 
+attempt_number = 2; 
+
 % set time step
 k_2 = 0.06091;
 k_3 = -4.0162;
@@ -9,16 +11,22 @@ T = 0.25; %%WE HAVE TO PICK A NEW T VALUE
 
 s = tf('s')
 P = (k_2*k_3)/(s*s)
-G = c2d(P, T, 'zoh')
+G_orig = c2d(P, T, 'zoh')
 
-[num, den] = tfdata(G, 'v');
+[num, den] = tfdata(G_orig, 'v');
 [r, p, k] = residuez(num, den);
 
 %Pole Picking Parameters
-total = 40;
+total = 100;
 rmax = 0.9;
 center = 0;
 
+%specs
+ref_amplitude = 0.15; 
+max_U = 0.7;
+max_OS = 1.45;
+max_ts = 7; 
+max_ess = 0; 
 
 % does the plant have a double integrator?
 double_integrator_flag = 1;
@@ -62,14 +70,20 @@ ncomplex = length(stableComplexPlantPoles);
 
 % verify that your plant is correct!
 z = tf('z',T);
-G_check = 0;
+G = 0;
 for k=1:n
-    G_check = G_check + cs(k)/(z-qs(k));
+    G = G + cs(k)/(z-qs(k));
 end
 if double_integrator_flag
-    G_check = G_check + c_double_integrator/(z-1)^2;
+    G = G + c_double_integrator/(z-1)^2;
 end
-G_check
+
+% plant_error = norm(G_orig - G);
+% disp(['Norm of (G_orig - G_check) = ', num2str(plant_error)]);
+% if plant_error > 1e-10
+%     disp('WARNING: Plant mismatch! G and G_check are not the same.');
+%     disp('The optimization is based on a different plant than the verification.');
+% end
 
 %% Poles Chosen in the Simple Pole Approximation of W[z]
 
@@ -161,7 +175,7 @@ b = [zeros(m+size(beta,1),1);
 %% Determination of step response matrices
 
 % time horizon
-K = 3000;
+K = 100;
 
 step_ry = zeros(K,m+nhat);
 
@@ -247,18 +261,19 @@ end
 
 
 %% Defining the objective function and constraints for the optimization
-
-%Objective = max(step_ru*w); %%% ATTEMPT 3
-Objective = norm(step_ru*w, 2); %%% ATTEMPT 4
+%Objective = 0;
+Objective = max(step_ru*w);
+Objective_str = 'max(step_ru*w)';
+%Objective = norm(step_ru*w, 2); 
 
 % IOP constraint
 Constraints = [A*[w;x;xhat] == b];
 
 % input saturation constraint
 Constraints = [Constraints,
-              max(step_ru*w) <= 0.65];
+              max(step_ru*w) <= max_U];
 Constraints = [Constraints,
-              min(step_ru*w) >= -0.65];       
+              min(step_ru*w) >= -max_U];       
 % Constraints = [Constraints, ...
 %                norm(step_ru*w, inf) <= 0.7];        
 
@@ -273,10 +288,10 @@ end
 
 % overshoot constraint
 Constraints = [Constraints,
-               max(step_ry*[x;xhat]) <= 1.45*(-steadyState*[x;xhat])];
+               max(step_ry*[x;xhat]) <= max_OS*(-steadyState*[x;xhat])];
 
 % settling time constraint
-jhat = floor(7/T);
+jhat = floor(max_ts/T);
 Constraints = [Constraints,
                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
                1.02*(-steadyState*[x;xhat]),
@@ -312,7 +327,7 @@ ylabel('u[k]');
 log_scale_flag = 1;
 
 % heat map
-figure(3)
+heatmap = figure(3)
 t = linspace(0,2*pi);
 plot(cos(t),sin(t),'k--');
 hold on;
@@ -326,6 +341,7 @@ end
 hold off;
 colormap(jet);
 colorbar;
+saveas(heatmap, "attempt_"+attempt_number+"_polemap.png")
 
 %% Recover the transfer functions
 
@@ -370,7 +386,7 @@ X = tf(num,den,T);
 
 % compute D by hand
 j = sqrt(-1);
-D = recoverD(W, X, T, 0.0001);
+D = recoverD(W, X, T, 0.00001);
 
 % compute T_ry and T_ru by hand
 %
@@ -378,7 +394,6 @@ D = recoverD(W, X, T, 0.0001);
 % 3. Calculate T_ry and T_ru using the feedback formulas:
 T_ry = feedback(G*D, 1);
 T_ru = feedback(D, G); %these are not transfer functions they're zpg 
-
 
 %By default, step applies an input signal that changes from 0 to 1 at t = 0. 
 %To customize the amplitude and bias, use RespConfig. 
@@ -390,15 +405,167 @@ opt = stepDataOptions('StepAmplitude', 0.15);
 %opt.Bias = -0.7;
 %opt.Amplitude = 1.4;
 
-figure(1)
+y_out = figure(1)
+yname = "attempt_"+attempt_number+"_Y.png";
 hold on;
 step(T_ry, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
+saveas(y_out, yname);
 hold off;
 
-figure(2)
+u_out = figure(2)
+uname = "attempt_"+attempt_number+"_U.png";
 hold on;
 step(T_ru, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
+saveas(u_out, uname);
 hold off;
+%% --- Generate Performance Metrics  ---
+disp('Calculating performance metrics...');
+
+% 1. Get step response data and info for T_ry (output Y)
+% We use stepinfo to get standard metrics like settling time and peak
+S_y = stepinfo(T_ry, 'StepAmplitude', ref_amplitude);
+[y_data, ~] = step(T_ry, opt); % Get raw data for final value
+Y_final = y_data(end);
+
+% 2. Get step response data for T_ru (input U)
+[u_data, ~] = step(T_ru, opt);
+
+Metric_Ess = ref_amplitude - Y_final; %steady state error
+Metric_UMax = max(u_data); %maximum ctrl input
+Metric_YMax = S_y.Peak; %max output
+Metric_OS = S_y.Overshoot;
+Metric_SettlingTime = S_y.SettlingTime;
+Metric_UTotalVariation = sum(abs(diff(u_data))); % 5. Oscillation/Variability of U (using Total Variation)
+Metric_NumPoles = m; 
+Metric_ObjectiveValue = value(Objective);
+
+%% --- Assemble and Save Table ---
+
+% Define metric names (will be column headers)
+metricNames = {
+    'Constraint_Max_U', 
+    'Constraint_Max_OS',
+    'Constraint_Max_TS',
+    'Constraint_ObjectiveValue',
+    'Constraint_NumPoles',
+    'RESULT_Ess',
+    'RESULT_UMax',
+    'RESULT_OS',
+    'RESULT_SettlingTime',
+    'RESULT_UTotalVariation',
+    };
+
+% Collect all values into a single column vector
+allValues = [
+    max_U;   
+    max_OS-1; 
+    max_ts;
+    Metric_ObjectiveValue;
+    Metric_NumPoles;
+    Metric_Ess;
+    Metric_UMax;
+    Metric_OS;
+    Metric_SettlingTime;
+    Metric_UTotalVariation;
+    ];
+
+% --- NEW LOGIC: Load, Update, Save (Rows = Attempts, Cols = Metrics) ---
+
+% 1. Define the file name and the new ROW name
+resultsFile = 'optimization_results.mat';
+newRowName = sprintf('Attempt_%d', attempt_number); % Use char ' (not string ")
+
+% 2. Create a new table for THIS attempt's data
+% We transpose allValues to be a row and use array2table
+newAttemptTable = array2table(allValues', 'VariableNames', metricNames, 'RowNames', {newRowName});
+
+% 3. Check if the master results file already exists
+if isfile(resultsFile)
+    % 4a. If it exists, load the master table
+    load(resultsFile, 'resultsTable');
+    
+    % --- Check for Mismatched Columns ---
+    % Get column names from existing and new tables
+    existingCols = resultsTable.Properties.VariableNames;
+    newCols = newAttemptTable.Properties.VariableNames;
+    
+    % Find columns in new that are not in existing
+    colsToAdd = setdiff(newCols, existingCols);
+    if ~isempty(colsToAdd)
+        fprintf('Adding new columns to master table: %s\n', strjoin(colsToAdd, ', '));
+        % Add new columns to the old table, fill with NaN
+        for i = 1:length(colsToAdd)
+            resultsTable.(colsToAdd{i}) = nan(height(resultsTable), 1);
+        end
+    end
+    
+    % Find columns in existing that are not in new (e.g., if you removed one)
+    colsToFill = setdiff(existingCols, newCols);
+    if ~isempty(colsToFill)
+         fprintf('Filling missing columns in new attempt: %s\n', strjoin(colsToFill, ', '));
+         for i = 1:length(colsToFill)
+            newAttemptTable.(colsToFill{i}) = nan;
+         end
+    end
+    
+    % Re-order columns in new table to match existing one before appending
+    newAttemptTable = newAttemptTable(:, resultsTable.Properties.VariableNames);
+    % --- End Mismatch Check ---
+
+    % Check if this row already exists (e.g., if you re-ran the same number)
+    if ismember(newRowName, resultsTable.Properties.RowNames)
+        % Overwrite the existing row
+        fprintf('Warning: Attempt %d already exists. Overwriting row.\n', attempt_number);
+        resultsTable(newRowName, :) = newAttemptTable;
+    else
+        % Add the new data as a new row
+        resultsTable = [resultsTable; newAttemptTable];
+    end
+else
+    % 4b. If it doesn't exist, this is the first attempt.
+    % The master table is just this one new attempt.
+    resultsTable = newAttemptTable;
+end
+
+% 5. Display the updated table in the command window
+disp('--- Performance Results ---');
+disp(resultsTable);
+
+% 6. Save the updated master table back to the .mat file
+% 6. Save the updated master table AND the transfer functions
+fprintf('Saving results table and transfer functions...\n');
+
+% --- Create a field name based on the attempt number ---
+attemptField = sprintf('Attempt_%d', attempt_number);
+
+% --- Check if the results file already has transfer functions ---
+if isfile(resultsFile)
+    % Load *just* the tf_results variable, if it exists
+    vars = who('-file', resultsFile);
+    if ismember('tf_results', vars)
+        load(resultsFile, 'tf_results');
+    else
+        % If it doesn't exist, create an empty struct
+        tf_results = struct();
+    end
+else
+    % If the file doesn't exist at all, create an empty struct
+    tf_results = struct();
+end
+
+% --- Add the new TFs and their step options to the struct ---
+tf_results.(attemptField).T_ry = T_ry;
+tf_results.(attemptField).T_ru = T_ru;
+tf_results.(attemptField).opt = opt; % Save the 'opt' used for this step
+
+% --- Save both variables back to the .mat file ---
+save(resultsFile, 'resultsTable', 'tf_results');
+
+
+% 7. Also update the LaTeX export to use the new table orientation
+table2latex(resultsTable);
+fprintf('\nResults table saved to %s\n', resultsFile);
+
 
 
 
