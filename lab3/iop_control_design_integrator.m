@@ -56,12 +56,13 @@ stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
-cs = [r(1)]
-
+%cs = [r(1)]
+cs = [k_2*k_3*0.5*T^2]
 if double_integrator_flag
     % coefficients include both c_n for 1/(z-1) and c_(n+1) for 1/(z-1)^2 for
     %       the pole at z=1
-    c_double_integrator = [r(2)];
+    %c_double_integrator = [r(2)];
+    c_double_integrator = [k_2*k_3*T^2]
     cs = [cs c_double_integrator];
 end     
 
@@ -402,8 +403,8 @@ D = recoverD(W, X, T, 0.00001);
 %
 
 % 3. Calculate T_ry and T_ru using the feedback formulas:
-T_ry = feedback(G*D, 1);
-T_ru = feedback(D, G); %these are not transfer functions they're zpg 
+T_ry = feedback(G_orig*D, 1);
+T_ru = feedback(D, G_orig); %these are not transfer functions they're zpg 
 
 %By default, step applies an input signal that changes from 0 to 1 at t = 0. 
 %To customize the amplitude and bias, use RespConfig. 
