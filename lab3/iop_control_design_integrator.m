@@ -1,9 +1,11 @@
 clear
 clc
+close all
 load 'poles_B.mat'
 
-attempt_number = 2; 
-
+attempt_number = 20; 
+load('polesets.mat');
+poleset = prune_8.'
 % set time step
 k_2 = 0.06091;
 k_3 = -4.0162;
@@ -23,8 +25,8 @@ center = 0;
 
 %specs
 ref_amplitude = 0.15; 
-max_U = 0.7;
-max_OS = 1.45;
+max_U = 0.65
+max_OS = 1.44;
 max_ts = 7; 
 max_ess = 0; 
 
@@ -89,7 +91,8 @@ end
 
 j = sqrt(-1);
 realWPoles = [];
-complexWPoles = [generate_poles(total,rmax,center)];
+%complexWPoles = [generate_poles(total,rmax,center)];
+complexWPoles = poleset;
 % for checking the integrator in the controller:
 %complexWPoles = poles_B';
 ps = [realWPoles complexWPoles];
@@ -262,9 +265,16 @@ end
 
 %% Defining the objective function and constraints for the optimization
 %Objective = 0;
-Objective = max(step_ru*w);
-Objective_str = 'max(step_ru*w)';
-%Objective = norm(step_ru*w, 2); 
+%Objective = max(step_ru*w);
+%Objective = min(max(step_ru*w));
+Objective_num = 2;
+Objective = norm(step_ru*w, 2); 
+
+%objective_num legend:
+%1 --> %Objective = max(step_ru*w);
+%2 --> %Objective = norm(step_ru*w, 2); 
+
+
 
 % IOP constraint
 Constraints = [A*[w;x;xhat] == b];
@@ -460,7 +470,7 @@ allValues = [
     max_U;   
     max_OS-1; 
     max_ts;
-    Metric_ObjectiveValue;
+    Objective_num;
     Metric_NumPoles;
     Metric_Ess;
     Metric_UMax;
