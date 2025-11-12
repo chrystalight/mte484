@@ -3,9 +3,9 @@ clc
 close all
 load 'poles_B.mat'
 
-attempt_number = 25; 
-load('polesets.mat');
-poleset = prune_11.'
+attempt_number = 12; 
+load('new_plant_polesets.mat')
+poleset = prune_10.'
 % set time step
 k_2 = 0.06091;
 k_3 = -4.0162;
@@ -25,8 +25,8 @@ center = 0;
 
 %specs
 ref_amplitude = 0.15; 
-max_U = 0.65
-max_OS = 1.44;
+max_U = 0.625;
+max_OS = 1.425;
 max_ts = 7; 
 max_ess = 0; 
 
@@ -266,10 +266,10 @@ end
 
 %% Defining the objective function and constraints for the optimization
 %Objective = 0;
-Objective = max(step_ru*w);
+%Objective = max(step_ru*w);
 %Objective = min(max(step_ru*w));
-Objective_num = 1;
-%Objective = norm(step_ru*w, 2); 
+Objective_num = 2;
+Objective = norm(step_ru*w, 2); 
 
 %objective_num legend:
 %1 --> %Objective = max(step_ru*w);
@@ -442,7 +442,7 @@ Y_final = y_data(end);
 [u_data, ~] = step(T_ru, opt);
 
 Metric_Ess = ref_amplitude - Y_final; %steady state error
-Metric_UMax = max(u_data); %maximum ctrl input
+Metric_UMax = max(abs(u_data)); %maximum ctrl input
 Metric_YMax = S_y.Peak; %max output
 Metric_OS = S_y.Overshoot;
 Metric_SettlingTime = S_y.SettlingTime;
@@ -483,7 +483,7 @@ allValues = [
 % --- NEW LOGIC: Load, Update, Save (Rows = Attempts, Cols = Metrics) ---
 
 % 1. Define the file name and the new ROW name
-resultsFile = 'optimization_results.mat';
+resultsFile = 'new_plant_optimization_results.mat';
 newRowName = sprintf('Attempt_%d', attempt_number); % Use char ' (not string ")
 
 % 2. Create a new table for THIS attempt's data
