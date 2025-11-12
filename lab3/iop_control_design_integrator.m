@@ -3,9 +3,9 @@ clc
 close all
 load 'poles_B.mat'
 
-attempt_number = 12; 
+attempt_number = 14; 
 load('new_plant_polesets.mat')
-poleset = prune_10.'
+poleset = prune_6.'
 % set time step
 k_2 = 0.06091;
 k_3 = -4.0162;
@@ -268,12 +268,15 @@ end
 %Objective = 0;
 %Objective = max(step_ru*w);
 %Objective = min(max(step_ru*w));
-Objective_num = 2;
-Objective = norm(step_ru*w, 2); 
+Objective_num = 3;
+%Objective = norm(step_ru*w, 2); 
+Objective = min(norm(step_ru*w))
 
 %objective_num legend:
 %1 --> %Objective = max(step_ru*w);
 %2 --> %Objective = norm(step_ru*w, 2); 
+%3 --> objective = min(norm(u))
+
 
 
 
@@ -568,6 +571,7 @@ end
 tf_results.(attemptField).T_ry = T_ry;
 tf_results.(attemptField).T_ru = T_ru;
 tf_results.(attemptField).opt = opt; % Save the 'opt' used for this step
+tf_results.(attemptField).D = D;
 
 % --- Save both variables back to the .mat file ---
 save(resultsFile, 'resultsTable', 'tf_results');
