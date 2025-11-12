@@ -3,26 +3,18 @@
 #include <cppQueue.h>
 
 // ========== TODO: POPULATE OUTER LOOP CONTROLLER =========
-#define N_ZEROS_OUTER = 2;
-#define N_POLES_OUTER = 2;
-
-const double a_coeffs_outer[N_ZEROS_OUTER] = {
-0.0, 0.0
-}; 
-
-const double b_coeffs_outer[N_POLES_OUTER] = {
-1.0, 0.0
-};
+#define N_ZEROS_OUTER 2
+#define N_POLES_OUTER 2
 
 //for STATION 13: 
-//#define N_ZEROS 26
-//#define N_POLES 27
-//const int STATION_NUM = 13; 
+#define N_ZEROS_INNER 26
+#define N_POLES_INNER 27
+const int STATION_NUM = 13; 
 
 //for STATION 12:
-#define N_ZEROS_INNER 24
-#define N_POLES_INNER 25
-const int STATION_NUM = 12; 
+//#define N_ZEROS_INNER 24
+//#define N_POLES_INNER 25
+//const int STATION_NUM = 12; 
 
 
 
@@ -31,9 +23,9 @@ const int MOT_PIN = A0;   // motor angle sensor
 const int BAL_PIN = A1;   // ball position sensor
 
 // ========== System Parameters ==========
-const int T = 4;   // Sampling time in MS
+const int T_INNER = 4;   // Sampling time in MS
 const int T_OUTER = 240;   
-const int OUTER_DIV = T_OUTER/T; //T_outer/T_innter
+const int OUTER_DIV = T_OUTER/T_INNER; //T_outer/T_innter
 static int outer_div_ctr = 0;     
 
 
@@ -45,13 +37,13 @@ const float saturation_limit = 0.7;         // The limit for the reference signa
 // ========== For Logging =============
 struct LogBook {
 long time_ms;
-double y_ref;           // Outer loop reference (meters)
-double y_current;       // Current ball position (meters)
-double theta_ref_raw;   // Outer loop output (radians)
+double y_ref;         // Outer loop reference (meters)
+double y_current;     // Current ball position (meters)
+double theta_ref_raw; // Outer loop output (radians)
 double theta_ref_sat; // Saturated inner loop reference (radians)
-double theta_current;  // Current motor angle (radians)
+double theta_current; // Current motor angle (radians)
 int trial_num;
-double u_actual;       // Final motor voltage (Volts)
+double u_actual;      // Final motor voltage (Volts)
 };
 
 volatile LogBook new_data;
@@ -59,7 +51,7 @@ volatile bool data_alarm = false;
 void printLogBook(LogBook data){
 Serial.print(data.time_ms); //time in ms
 Serial.print(",");
-Serial.print(data.y_ref, 5);  //y_ref
+Serial.print(data.y_ref, 5);    //y_ref
 Serial.print(",");
 Serial.print(data.y_current, 5); //y_current
 Serial.print(",");
@@ -80,15 +72,12 @@ Serial.println(data.u_actual, 5); //controller output
 // --- Inner Loop (D1) Queues ---
 cppQueue u_queue_inner(sizeof(double), N_POLES_INNER, IMPLEMENTATION, true);
 cppQueue e_queue_inner(sizeof(double), N_ZEROS_INNER, IMPLEMENTATION, true);
-const double* a_coeffs_inner;
-const double* b_coeffs_inner;
-
 // --- Outer Loop (D2) Queues ---
 cppQueue u_queue_outer(sizeof(double), N_POLES_OUTER, IMPLEMENTATION, true);
 cppQueue e_queue_outer(sizeof(double), N_ZEROS_OUTER, IMPLEMENTATION, true);
 
 
-const double a_coeffs_13[26] = {
+const double a_coeffs_inner[26] = {
   -4.014671308410470,
   6.595993799639460,
   -3.837648018627513,
@@ -117,7 +106,7 @@ const double a_coeffs_13[26] = {
   0.004242677516370,
 }; // coefficients on the numerator of D
 
-const double b_coeffs_13[27] = {
+const double b_coeffs_inner[27] = {
   1.000000000000000,
   -1.642984519812282,
   0.958321968432410,
@@ -147,7 +136,15 @@ const double b_coeffs_13[27] = {
   0.000008696897701,
 }; //coefficients on the denominator of D
 
-const double a_coeffs_12[24] = {
+
+const double a_coeffs_outer[N_ZEROS_OUTER] = {
+0.0, 0.0
+}; 
+
+const double b_coeffs_outer[N_POLES_OUTER] = {
+1.0, 0.0
+};
+/*const double a_coeffs_inner[24] = {
   -3.202514621083537,
    4.850224482639266,
   -2.416024408545324,
@@ -174,7 +171,7 @@ const double a_coeffs_12[24] = {
    0.654129594424024,
 }; // coefficients on the numerator of D
 
-const double b_coeffs_12[25] = {
+const double b_coeffs_inner[25] = {
    1.000000000000000,
   -1.514373454883820,
    0.751747880713601,
@@ -201,6 +198,7 @@ const double b_coeffs_12[25] = {
    0.001012971739118,
    0.000561335528298,
 }; //coefficients on the denominator of D
+*/
 
 
 // ========== For Filtering ===============
@@ -250,8 +248,8 @@ volatile int trial_num = 1; // 1-indexed because matlab
 const int motor_pot_min = 443;
 const int motor_pot_max = 336;
 
-const double motor_pot_slope = M_PI / (2.0 * (motor_pot_max - motor_pot_min));
-const double motor_pot_offset = M_PI / 4.0 - motor_pot_slope * motor_pot_max;
+const double motor_pot_slope = PI / (2.0 * (motor_pot_max - motor_pot_min));
+const double motor_pot_offset = PI / 4.0 - motor_pot_slope * motor_pot_max;
 
 
 double ball_pos_1 = 0.1; //meters
@@ -326,6 +324,7 @@ void endTest(){
       else{
         Serial.println("\nPlease enter a new step magnitude to run another test:");
       }
+  }
 }
 
 void fillQueueWithZero(cppQueue& q, int size) {
@@ -341,56 +340,45 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   geeWhizBegin();
-  set_control_interval_ms(T);
+  set_control_interval_ms(T_INNER);
   setMotorVoltage(0);
   g_latestBalValue = analogRead(BAL_PIN);
 
-  if(STATION_NUM == 12){
-    a_coeffs = a_coeffs_12;
-    b_coeffs = b_coeffs_12;
-  }
-  else if(STATION_NUM == 13){
-    a_coeffs = a_coeffs_13;
-    b_coeffs = b_coeffs_13;
-  }
+  //if(STATION_NUM == 12){
+  //  a_coeffs_inner = a_coeffs_12_inner;
+  //  b_coeffs_inner = b_coeffs_12_inner;
+  //}
 
   //prime variables so that we don't get wonky results 
-  fillQueueWithZero(u_queue, N_POLES);
-  fillQueueWithZero(e_queue, N_ZEROS);
+  fillQueueWithZero(u_queue_inner, N_POLES_INNER);
+  fillQueueWithZero(e_queue_inner, N_ZEROS_INNER);
+  fillQueueWithZero(u_queue_outer, N_POLES_OUTER);
+  fillQueueWithZero(e_queue_outer, N_ZEROS_OUTER);
   filtered_mot_raw = analogRead(MOT_PIN);
   filtered_bal_raw = analogRead(BAL_PIN);
 
   Serial.println("==================================================");
 
   switch(input_mode){
-
-    case STEP_INPUT: 
-      Serial.println("Mode: STEP INPUT");
-      if(autostep){
-        Serial.println("(AUTOMATED)");
-        Serial.println("\nPress any character and Enter to start the trial:");
-      }
-      else{
-        Serial.println("\nPlease enter a STEP MAGNITUDE (in radians) and press Enter:");
+  case STEP_INPUT: 
+    Serial.println("Mode: STEP INPUT (Ball Position)");
+    if(autostep){
+      Serial.println("(AUTOMATED LAB 3 STEPS)");
+      Serial.println("\nPress any character and Enter to start the trial:");
+    }
+    else{
+      Serial.println("\nPlease enter a STEP POSITION (in meters) and press Enter:");
       }
       break;
-
-    case SINE_INPUT:
-      Serial.println("Mode: SINE WAVE TRACKING");
-      Serial.println("\nPlease enter a SINE WAVE FREQUENCY (in Hz) and press Enter:");
-      break;
+    }
+    Serial.println("==================================================");
   }
-
-  Serial.println("==================================================");
-}
-
 // ================== Loop ==================
 void loop() {
 
   if (data_alarm){
     LogBook curr_data;
     noInterrupts(); //turn off interrupts to avoid race condition [isr and loop changing variable at same time]
-    // Use memcpy to copy the value of 'a' into 'b'
     memcpy(&curr_data, (void*)&new_data, sizeof(LogBook));    
     data_alarm = false;
     interrupts();
@@ -407,13 +395,11 @@ void loop() {
           startTest(userInput);
         }
         break;
-
       case TEST_COMPLETE:
         endTest();
         break;  
     }
   }
-
   //oversample at whatever rate this loop runs at, protect the value from being read while its being written
   int newSample = analogRead(BAL_PIN);
   if (newSample > MIN_BAL_READING && newSample < MAX_BAL_READING) {
@@ -424,107 +410,136 @@ void loop() {
   }
 }
 
+/**
+ * @brief Calculates the desired motor angle (theta_ref) based on ball position error.
+ * @param y_ref The target ball position in meters.
+ * @param y_current The current ball position in meters.
+ * @return The calculated reference angle (theta_ref) in radians.
+*/
+
+double outer_ctrl(double y_ref, double y_current) {
+ 
+  double error = y_ref - y_current;
+  e_queue_outer.push(&error); // e[k] is at index N_ZEROS_OUTER - 1
+  
+  double u_total = 0.0;
+  double peeker;
+
+  // Denominator part: -b1*u[k-1] - b2*u[k-2] ...
+  // Loop starts at j=1. u[k-1] is at index N_POLES_OUTER - 1
+  // u[k-j] is at index N_POLES_OUTER - j
+  for(int j = 1; j < N_POLES_OUTER; j++){
+    u_queue_outer.peekIdx(&peeker, N_POLES_OUTER - j); // Get u[k-j]
+    u_total -= b_coeffs_outer[j] * peeker;
+  }
+
+  // Numerator part: a0*e[k] + a1*e[k-1] ...
+  // Loop starts at j=0. e[k] is at index N_ZEROS_OUTER - 1
+  // e[k-j] is at index N_ZEROS_OUTER - 1 - j
+  for(int j = 0; j < N_ZEROS_OUTER; j++){
+    e_queue_outer.peekIdx(&peeker, N_ZEROS_OUTER - 1 - j); // Get e[k-j]
+    u_total += a_coeffs_outer[j] * peeker;
+  }
+
+  double u_new = u_total / b_coeffs_outer[0]; // Assume b0 is 1, but good practice
+  u_queue_outer.push(&u_new);
+  return u_new;
+}
+
+
+/**
+ * @brief Calculates the required motor voltage (U) based on motor angle error.
+ * @param theta_ref The target motor angle in radians (from outer loop).
+ * @param theta_current The current motor angle in radians.
+ * @return The calculated motor voltage (U) in Volts.
+ */
+
+double inner_ctrl(double theta_ref, double theta_current) {
+  double error = theta_ref - theta_current;
+  e_queue_inner.push(&error); // e[k] is at index N_ZEROS_OUTER - 1
+  
+  double u_total = 0.0;
+  double peeker;
+
+  //Denominator part:-b1*u[k-1]-b2*u[k-2]
+  // Loop starts at j=1. u[k-1] is at index N_POLES_OUTER - 1
+  // u[k-j] is at index N_POLES_OUTER - j
+  for(int j = 1; j < N_POLES_INNER; j++){
+    u_queue_inner.peekIdx(&peeker, N_POLES_INNER - j); // Get u[k-j]
+    u_total -= b_coeffs_inner[j] * peeker;
+  }
+
+  // Numerator part: a0*e[k] + a1*e[k-1] ...
+  // Loop starts at j=0. e[k] is at index N_ZEROS_OUTER - 1
+  // e[k-j] is at index N_ZEROS_OUTER - 1 - j
+  for(int j = 0; j < N_ZEROS_INNER; j++){
+    e_queue_inner.peekIdx(&peeker, N_ZEROS_INNER - 1 - j); // Get e[k-j]
+    u_total += a_coeffs_inner[j] * peeker;
+  }
+
+  double u_new = u_total / b_coeffs_outer[0]; // Assume b0 is 1, but good practice
+  u_queue_inner.push(&u_new);
+  return u_new;
+}
+
 // ================== Control ISR ==================
 void interval_control_code(void) {
-
-  if (currentState != RUNNING_TEST) {
-    return;
-  }
-  
-  if (T * i >= max_T) {
-    //test is over!
-    setMotorVoltage(0);
-    currentState = TEST_COMPLETE;
-    return;
-  }
-
-  int motor_raw = analogRead(MOT_PIN);
-  int filtered_bal_raw = g_latestBalValue;
-
-  // Apply Exponential Moving Average (EMA) filter
-  filtered_mot_raw = (FILTER_ALPHA_MOTOR * motor_raw) + ((1.0 - FILTER_ALPHA_MOTOR) * filtered_mot_raw); //filtered_mot_raw holds the most recent value
-  // ---- Read sensor ----
-  double current_angle = map_potentiometer(filtered_mot_raw);
-  double current_y = map_ball_sensor(filtered_bal_raw);
-
-  // ---- Closed Loop Control Logic ----
-  double ref_y;
-  // ---- Control Logic based on Mode ----
-    ref_y = g_target_pos;
-    else { // input_mode == 2, calculate sin wave
-      float current_time_s = (float)(T * i) / 1000.0;
-      ref = amplitude_rad * sin(2.0 * M_PI * frequency_hz * current_time_s);
+    if (currentState != RUNNING_TEST) {
+      return;
     }
 
-    double constrained_ref = constrain(ref, -saturation_limit, saturation_limit);
+    long current_time_ms = T_INNER * i;
     
-    // ---- Discrete Controler ----
-    
-    double error = constrained_ref - current_angle;
-    e_queue.push(&error);
-    double u_total = 0.0;
-    double peeker;
-
-    //to get error at current time, you need to check index of queue-size - 1. index[0] --> oldest error
-
-    //first subtract: b coefficients, from 1 to N_POLES --> b1 * u [k - 1]
-    for(int j = 1; j<N_POLES; j++){
-      u_queue.peekIdx(&peeker, N_POLES-j);
-      u_total -= b_coeffs[j]*peeker;
-
-      //example: at j = 1
-      //u_queue.peekIdx(&peeker, N_POLES-j); --> this gives the 'last' value of u_queue, which is the most recently saved U value, u[k-1]
-      //u_total -= b_coeffs[j]*peeker; --> this gets b1, giving b1*u[k-1]
-
-      //example: at j = n_poles-1
-      //u_queue.peekIdx(&peeker, N_POLES-j); --> this gives u_queue[0], , which is oldest historical value, u[k-27] in this case
-      //u_total -= b_coeffs[j]*peeker; --> this gets b[26], the last b coefficient, giving b[26]*u[k-26]
+    if (current_time_ms >= max_T) {
+      //test is over!
+      setMotorVoltage(0);
+      currentState = TEST_COMPLETE;
+      return;
     }
 
-    for(int j = 0; j<N_ZEROS; j++){
-      e_queue.peekIdx(&peeker, N_ZEROS-j-1);
-      u_total += a_coeffs[j]*peeker;
-      //we want to do a[j] times e[k-j] e.g. starting with a[0]*e[k]
-      //e[k-j] is counted backwards starting from N_ZEROS-1 --> e[k-j] is at index (N_ZEROS-1-j)
+    int motor_raw = analogRead(MOT_PIN);
+    int filtered_bal_raw = g_latestBalValue; //get oversampled value
+
+    // Apply Exponential Moving Average (EMA) filter
+    filtered_mot_raw = (FILTER_ALPHA_MOTOR * motor_raw) + ((1.0 - FILTER_ALPHA_MOTOR) * filtered_mot_raw); //filtered_mot_raw holds the most recent value
+    // ---- Read sensor ----
+    double current_angle = map_potentiometer(filtered_mot_raw);
+    double current_y = map_ball_sensor(filtered_bal_raw);
+
+    // ---- Outer Loop Controller (Runs at slower rate T_OUTER) ----
+
+    if (outer_div_ctr == 0) {
+      g_theta_ref_from_outer_loop = outer_ctrl(g_target_pos, current_y);
     }
 
-    double U = u_total/b_coeffs[0];
-    u_queue.push(&U);
-    
+    outer_div_ctr = (outer_div_ctr + 1) % OUTER_DIV; //increment counter and wrap around
 
-    //stiction comp:
+    // ---- Inner Loop Controller (Runs at faster rate T_INNER) ----
+
+    //Saturate the reference angle (uses the value from outer loop, which is held constant between outer loop ticks)
+    double constrained_theta_ref = constrain(g_theta_ref_from_outer_loop, -saturation_limit, saturation_limit);
+
+    // Calculate motor voltage from inner loop
+    double U = inner_ctrl(constrained_theta_ref, current_angle);
+
     double U_comped = U;
-    if (abs(U) > 0.01) {
+      if (abs(U) > 0.01) { // Apply compensation if voltage is not tiny
       U_comped = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
     }
 
-    if (input_mode == ISR_TIMING_TEST) {
-      // perform all the calculations above, 
-      // but hardcode the output voltage to alternate between 0 and 5
-      U_comped = (i % 2) * 5;
-    }
-    setMotorVoltage(U_comped);
-  
+    setMotorVoltage(U_comped);  
   // ---- log data ----
-    new_data.time_ms = T * i;
-    new_data.ref = ref;
-    new_data.constrained_ref = constrained_ref;
-    new_data.current_angle = current_angle;
+    new_data.time_ms = current_time_ms;
+    new_data.y_ref = g_target_pos;
+    new_data.y_current = current_y;
+    new_data.theta_ref_raw = g_theta_ref_from_outer_loop;
+    new_data.theta_ref_sat = constrained_theta_ref;
+    new_data.theta_current = current_angle;
     new_data.trial_num = trial_num;
-    new_data.trial_value = trial_value;
     new_data.u_actual = U_comped;
-    new_data.ball_raw = filtered_bal_raw;
 
     data_alarm = true;
-
     i++;
 }
 
-void inner_loop(theta_ref){
-
-}
-
-double outer_loop(){
-
-}
 

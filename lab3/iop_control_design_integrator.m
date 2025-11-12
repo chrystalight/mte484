@@ -1,16 +1,17 @@
-clear
-clc
-close all
+%clear
+%clc
+%close all
 load 'poles_B.mat'
 
-attempt_number = 14; 
+attempt_number = 1; 
 load('new_plant_polesets.mat')
-poleset = prune_6.'
+poleset = prune_1.'
+resultsFile = 'jemzu_results.mat';
 % set time step
-k_2 = 0.06091;
-k_3 = -4.0162;
-T = 0.24; %%WE HAVE TO PICK A NEW T VALUE
 
+%k_3 = -4.25;
+T = 0.24; %%WE HAVE TO PICK A NEW T VALUE
+%T = 0.4;
 s = tf('s')
 P = (k_2*k_3)/(s*s)
 G_orig = c2d(P, T, 'zoh')
@@ -37,6 +38,8 @@ double_integrator_flag = 1;
 controller_integrator_flag = 0;
 
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
+k_2 = 0.06091;
+k_3 = -4.0162;
 
 stableRealPlantPoles = [];
 stableComplexPlantPoles = [];
@@ -81,6 +84,8 @@ if double_integrator_flag
     G = G + c_double_integrator/(z-1)^2;
 end
 
+%G = G_justin
+%G_orig = G_justin
 % plant_error = norm(G_orig - G);
 % disp(['Norm of (G_orig - G_check) = ', num2str(plant_error)]);
 % if plant_error > 1e-10
@@ -179,7 +184,7 @@ b = [zeros(m+size(beta,1),1);
 %% Determination of step response matrices
 
 % time horizon
-K = 100;
+K = 300;
 
 step_ry = zeros(K,m+nhat);
 
@@ -486,7 +491,6 @@ allValues = [
 % --- NEW LOGIC: Load, Update, Save (Rows = Attempts, Cols = Metrics) ---
 
 % 1. Define the file name and the new ROW name
-resultsFile = 'new_plant_optimization_results.mat';
 newRowName = sprintf('Attempt_%d', attempt_number); % Use char ' (not string ")
 
 % 2. Create a new table for THIS attempt's data
