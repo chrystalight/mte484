@@ -3,20 +3,19 @@
 #include <cppQueue.h>
 
 // ========== TODO: POPULATE OUTER LOOP CONTROLLER =========
-#define N_ZEROS_OUTER 2
-#define N_POLES_OUTER 2
-
 //for STATION 13: 
 #define N_ZEROS_INNER 26
 #define N_POLES_INNER 27
+
 const int STATION_NUM = 13; 
+
+#define N_ZEROS_OUTER 27
+#define N_POLES_OUTER 28
 
 //for STATION 12:
 //#define N_ZEROS_INNER 24
 //#define N_POLES_INNER 25
 //const int STATION_NUM = 12; 
-
-
 
 // ========== Pins ==========
 const int MOT_PIN = A0;   // motor angle sensor
@@ -31,7 +30,7 @@ static int outer_div_ctr = 0;
 
 const float stiction_offset_neg = -0.54;
 const float stiction_offset_pos = 0.08;
-const int max_T = 50000;                          // Test duration in MS
+const int max_T = 15000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
 // ========== For Logging =============
@@ -76,7 +75,7 @@ cppQueue e_queue_inner(sizeof(double), N_ZEROS_INNER, IMPLEMENTATION, true);
 cppQueue u_queue_outer(sizeof(double), N_POLES_OUTER, IMPLEMENTATION, true);
 cppQueue e_queue_outer(sizeof(double), N_ZEROS_OUTER, IMPLEMENTATION, true);
 
-
+// Station 13
 const double a_coeffs_inner[26] = {
   -4.014671308410470,
   6.595993799639460,
@@ -136,14 +135,69 @@ const double b_coeffs_inner[27] = {
   0.000008696897701,
 }; //coefficients on the denominator of D
 
-
+// not sure if these are station-specific... pretty sure they aren't?
 const double a_coeffs_outer[N_ZEROS_OUTER] = {
-0.0, 0.0
+  -4.166665421620564,
+  -1.028140433768777,
+   1.230834085913079,
+   3.128888986876133,
+   1.940257030121576,
+   0.843718317973515,
+   0.023445901918542,
+   0.044693033799688,
+   0.076610857235621,
+   0.013678545633188,
+  -0.227974073826002,
+  -0.461239299828000,
+  -0.648910517149018,
+  -0.796753124959115,
+  -0.462512644689705,
+  -0.045955198965863,
+   0.404706405696049,
+   0.698095670549242,
+   0.614455840198516,
+   0.285618177446519,
+   0.111583718043341,
+  -0.761085790758492,
+  -0.732496799443088,
+  -2.345917540318282,
+   0.032825759036112,
+   1.056486801259040,
+   1.171751988946379
 }; 
 
 const double b_coeffs_outer[N_POLES_OUTER] = {
-1.0, 0.0
+   1.000000000000000,
+   0.246754474847157,
+   0.004961809880291,
+  -0.451809179774356,
+  -0.272132742819161,
+  -0.221089663459667,
+  -0.115213273738796,
+  -0.150611557407302,
+  -0.144187965432549,
+  -0.133827720823898,
+  -0.089820453041181,
+  -0.053992283828072,
+  -0.023651858000354,
+  -0.004221446676769,
+   0.009615206109704,
+   0.014875152882891,
+   0.012133750884051,
+   0.005267269615967,
+   0.000689372816615,
+   0.003659843234899,
+   0.015900253738757,
+   0.034495436910785,
+   0.055932621572818,
+   0.072806452774950,
+   0.079166123246922,
+   0.063836130557479,
+   0.032209001793042,
+   0.008255309315977
 };
+
+// Station 12
 /*const double a_coeffs_inner[24] = {
   -3.202514621083537,
    4.850224482639266,
@@ -541,5 +595,6 @@ void interval_control_code(void) {
     data_alarm = true;
     i++;
 }
+
 
 

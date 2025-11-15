@@ -11,9 +11,12 @@
 load('pruned_poles.mat')
 load('prunder_poles.mat')
 load('prunedest_poles.mat')
-T = 0.005;
-k_1 = -2.288 %Station 13 value
-tau = 0.029 %Station 13 value
+T = 0.004;
+%k_1 = -2.288 %Station 13 value
+%tau = 0.029 %Station 13 value
+
+tau = 0.04328
+k_1 = -3.11083
 
 %k_1 = -2.691
 %tau = 0.028
