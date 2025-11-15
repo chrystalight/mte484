@@ -3,9 +3,15 @@
 #include <cppQueue.h>
 
 // ========== TODO: POPULATE OUTER LOOP CONTROLLER =========
-//for STATION 13: 
+//for STATION 13:
+/*
 #define N_ZEROS_INNER 26
 #define N_POLES_INNER 27
+*/
+
+//for STATION 13 NEW VALS:
+#define N_ZEROS_INNER 28
+#define N_POLES_INNER 28
 
 const int STATION_NUM = 13; 
 
@@ -76,6 +82,8 @@ cppQueue u_queue_outer(sizeof(double), N_POLES_OUTER, IMPLEMENTATION, true);
 cppQueue e_queue_outer(sizeof(double), N_ZEROS_OUTER, IMPLEMENTATION, true);
 
 // Station 13
+
+/*
 const double a_coeffs_inner[26] = {
   -4.014671308410470,
   6.595993799639460,
@@ -134,7 +142,70 @@ const double b_coeffs_inner[27] = {
   -0.000165534783335,
   0.000008696897701,
 }; //coefficients on the denominator of D
+*/
 
+//Station 13 NEW VALS
+
+const double a_coeffs_inner[28] = {
+  1.000000000000000,
+  -2.642984519096037,
+   2.601307725181655,
+  -1.141544162409170,
+   0.189288583548169,
+   0.010724609761245,
+  -0.011418194250985,
+   0.001054617475321,
+  -0.000940997242319,
+   0.002868655691917,
+  -0.002977515894495,
+   0.004687012816295,
+  -0.010736694376012,
+   0.006396086143370,
+  -0.000688115171175,
+  -0.001001359128670,
+  -0.000348345273954,
+  -0.000372973610895,
+  -0.000373568924833,
+  -0.000377039558912,
+  -0.000364635105492,
+  -0.000284448945049,
+  -0.000428392539048,
+  -0.000517384831868,
+   0.000394479950874,
+  -0.001510054228994,
+   0.000152469673089,
+  -0.000005839651830
+};
+
+const double b_coeffs_inner[28] = {
+  1.000000000000000,
+  -2.642984519822081,
+   2.598897685486468,
+  -1.132514666826088,
+   0.183072460123669,
+   0.012587819900194,
+  -0.011076556564073,
+   0.001352800603362,
+  -0.000563738274154,
+   0.003232016187070,
+  -0.002615286732223,
+   0.005036983286262,
+  -0.010368673872481,
+   0.006750031950047,
+  -0.000282815515002,
+  -0.000650848029541,
+   0.000008349635870,
+  -0.000005412641509,
+  -0.000008011251553,
+  -0.000009545095555,
+   0.000026837948914,
+  -0.000020023397721,
+   0.000005878248294,
+  -0.000000255025587,
+  -0.000000190636187,
+   0.000000061208677,
+   0.000000001091938
+};
 // not sure if these are station-specific... pretty sure they aren't?
 const double a_coeffs_outer[N_ZEROS_OUTER] = {
   -4.166665421620564,
@@ -275,7 +346,8 @@ bool autostep = true;
 enum ControlMode{
   STEP_INPUT = 1,
   CALIBRATE_BALL = 2,
-  ISR_TIMING_TEST = 3
+  ISR_TIMING_TEST = 3,
+  INNER_LOOP_TEST = 4   // NEW: inner loop only, theta_ref steps
 };
 
 enum ProgramState { 
@@ -329,31 +401,50 @@ double map_ball_sensor(int val){
 
 void startTest(float userInput){
   Serial.println("==============================================================================");
-   if (input_mode == STEP_INPUT) {
+  if (input_mode == STEP_INPUT) {
     if(autostep){
       g_target_pos = pos_mag[step_index];
       Serial.print("NEW TEST STARTED -> REFERENCE POSITION: ");
       Serial.print(g_target_pos, 4);
       Serial.println(" m");
-      }
-    else{
-        g_target_pos = userInput;
-        Serial.print("NEW TEST STARTED -> MANUAL POSITION: ");
-        Serial.print(g_target_pos, 4);
-        Serial.println(" m");
-        }
-        } 
-    else if(input_mode == CALIBRATE_BALL){
-        g_target_pos = 0.1; // just hold at 0.1m
     }
+    else{
+      g_target_pos = userInput;
+      Serial.print("NEW TEST STARTED -> MANUAL POSITION: ");
+      Serial.print(g_target_pos, 4);
+      Serial.println(" m");
+    }
+  } 
+  else if(input_mode == CALIBRATE_BALL){
+    g_target_pos = 0.1; // just hold at 0.1m
+  }
+  else if (input_mode == INNER_LOOP_TEST) {
+    if (autostep) {
+      // Reuse pos_mag as theta steps (in radians)
+      g_target_pos = pos_mag[step_index];
+      Serial.print("NEW TEST STARTED -> THETA STEP: ");
+      Serial.print(g_target_pos, 4);
+      Serial.println(" rad");
+    } else {
+      g_target_pos = userInput;
+      Serial.print("NEW TEST STARTED -> MANUAL THETA: ");
+      Serial.print(g_target_pos, 4);
+      Serial.println(" rad");
+    }
+  }
 
-    Serial.println("==============================================================================");
+  Serial.println("==============================================================================");
+  if (input_mode == INNER_LOOP_TEST) {
+    Serial.println("Time(ms),theta_ref(r),theta_curr(r),theta_ref_raw(r),theta_ref_sat(r),theta_curr(r),Trial,V_motor(V)");
+  } else {
     Serial.println("Time(ms),y_ref(m),y_curr(m),theta_ref_raw(r),theta_ref_sat(r),theta_curr(r),Trial,V_motor(V)");
+  }
 
-    i = 0;
-    outer_div_ctr = 0; // Reset outer loop counter
-    currentState = RUNNING_TEST;
+  i = 0;
+  outer_div_ctr = 0; // Reset outer loop counter
+  currentState = RUNNING_TEST;
 }
+
 
 
 
@@ -414,19 +505,29 @@ void setup() {
   Serial.println("==================================================");
 
   switch(input_mode){
-  case STEP_INPUT: 
-    Serial.println("Mode: STEP INPUT (Ball Position)");
-    if(autostep){
-      Serial.println("(AUTOMATED LAB 3 STEPS)");
-      Serial.println("\nPress any character and Enter to start the trial:");
-    }
-    else{
-      Serial.println("\nPlease enter a STEP POSITION (in meters) and press Enter:");
+    case STEP_INPUT: 
+      Serial.println("Mode: STEP INPUT (Ball Position)");
+      if(autostep){
+        Serial.println("(AUTOMATED LAB 3 STEPS)");
+        Serial.println("\nPress any character and Enter to start the trial:");
+      }
+      else{
+        Serial.println("\nPlease enter a STEP POSITION (in meters) and press Enter:");
       }
       break;
-    }
-    Serial.println("==================================================");
+
+    case INNER_LOOP_TEST:
+      Serial.println("Mode: INNER LOOP TEST (theta_ref in radians)");
+      if (autostep) {
+        Serial.println("(AUTOMATED THETA STEPS)");
+        Serial.println("\nPress any character and Enter to start the trial:");
+      } else {
+        Serial.println("\nPlease enter a THETA STEP (in radians) and press Enter:");
+      }
+      break;
   }
+  Serial.println("==================================================");
+}
 // ================== Loop ==================
 void loop() {
 
@@ -495,7 +596,7 @@ double outer_ctrl(double y_ref, double y_current) {
     u_total += a_coeffs_outer[j] * peeker;
   }
 
-  double u_new = u_total / b_coeffs_outer[0]; // Assume b0 is 1, but good practice
+  double u_new = u_total / b_coeffs_inner[0];// Assume b0 is 1, but good practice
   u_queue_outer.push(&u_new);
   return u_new;
 }
@@ -560,13 +661,16 @@ void interval_control_code(void) {
     double current_angle = map_potentiometer(filtered_mot_raw);
     double current_y = map_ball_sensor(filtered_bal_raw);
 
-    // ---- Outer Loop Controller (Runs at slower rate T_OUTER) ----
-
-    if (outer_div_ctr == 0) {
+  // ---- Outer Loop Controller (Runs at slower rate T_OUTER) ----
+    if (input_mode == INNER_LOOP_TEST) {
+      // Bypass outer loop: directly use theta reference
+      g_theta_ref_from_outer_loop = g_target_pos;
+    } 
+    else if (outer_div_ctr == 0) {
       g_theta_ref_from_outer_loop = outer_ctrl(g_target_pos, current_y);
     }
 
-    outer_div_ctr = (outer_div_ctr + 1) % OUTER_DIV; //increment counter and wrap around
+    outer_div_ctr = (outer_div_ctr + 1) % OUTER_DIV; // increment counter and wrap around
 
     // ---- Inner Loop Controller (Runs at faster rate T_INNER) ----
 
