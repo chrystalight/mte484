@@ -7,19 +7,26 @@
 
 % System Parameters
 
+clear;
+clc;
 
 load('pruned_poles.mat')
 load('prunder_poles.mat')
 load('prunedest_poles.mat')
 T = 0.004;
-%k_1 = -2.288 %Station 13 value
+%k_1 = -2.288 %Station 13 value 
 %tau = 0.029 %Station 13 value
 
-tau = 0.04328
-k_1 = -3.11083
+%k_1 = -2.388 %OLD S 13 value via SERGIO EMAIL
+%tau = 0.029 %OLD S 13 value via SERGIO EMAIL
 
-%k_1 = -2.691
+tau = 0.04328 %new s13 val via sergio
+k_1 = -3.11083 %new s13 val via sergio
+
 %tau = 0.028
+%k_1 = -2.691
+
+
 s = tf('s')
 P = k_1/(s*(s*tau+1))
 G = c2d(P, T, 'zoh')
@@ -31,20 +38,23 @@ G = c2d(P, T, 'zoh')
 total = 40;
 rmax = 0.9;
 center = 0;
+
+
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
 
 j = sqrt(-1);
-stableRealPlantPoles = [0.8712]; %Station 13 Value
+%stableRealPlantPoles = [0.8712]; %Station 13 Value
 %stableRealPlantPoles = [0.8669] %Station 12 Value
+stableRealPlantPoles = [0.871158769589269]; %Station 13 NEW VALUE
 stableComplexPlantPoles = [];
 unstablePlantPoles = [1.00]; 
 stablePlantPoles = [stableRealPlantPoles stableComplexPlantPoles];
 qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
-cs = [0.0098, -0.0092]; %Station 13 Value
+%cs = [0.0098, -0.0092]; %Station 13 Value
 %cs = [-0.0108, 0.0116] %Station 12 Value
-
+cs = [0.009813220756813, -0.009152000000000] %Station 13 NEW VALUE
 n = length(qs);
 nhat = length(stablePlantPoles);
 nreal = length(stableRealPlantPoles);
@@ -314,7 +324,7 @@ X = tf(num,den,T);
 
 % compute D by hand
 j = sqrt(-1);
-D = recoverD(W, X, T, 0.0001);
+D = recoverD(W, X, T, 0.000001);
 
 % compute T_ry and T_ru by hand
 %

@@ -4,19 +4,29 @@
 
 // ========== TODO: POPULATE OUTER LOOP CONTROLLER =========
 //for STATION 13:
-/*
-#define N_ZEROS_INNER 26
-#define N_POLES_INNER 27
-*/
+
+//#define N_ZEROS_INNER 26
+//#define N_POLES_INNER 27
 
 //for STATION 13 NEW VALS:
-#define N_ZEROS_INNER 28
-#define N_POLES_INNER 28
+#define N_ZEROS_INNER 25
+#define N_POLES_INNER 26
 
 const int STATION_NUM = 13; 
 
-#define N_ZEROS_OUTER 27
-#define N_POLES_OUTER 28
+//CTRL attempt 1, November 11, with 0.240s sampling time
+//#define N_ZEROS_OUTER 27
+//#define N_POLES_OUTER 28
+
+
+//CTRL attempt with 0.400s sampling time
+//#define N_ZEROS_OUTER 33
+//#define N_POLES_OUTER 34
+
+//attempt w/ 360ms sampling
+
+#define N_ZEROS_OUTER 24
+#define N_POLES_OUTER 25
 
 //for STATION 12:
 //#define N_ZEROS_INNER 24
@@ -29,7 +39,9 @@ const int BAL_PIN = A1;   // ball position sensor
 
 // ========== System Parameters ==========
 const int T_INNER = 4;   // Sampling time in MS
-const int T_OUTER = 240;   
+//const int T_OUTER = 240;   //ATTEMPT 1
+//const int T_OUTER = 400; //ATTEMPT 2
+const int T_OUTER = 360;
 const int OUTER_DIV = T_OUTER/T_INNER; //T_outer/T_innter
 static int outer_div_ctr = 0;     
 
@@ -82,6 +94,8 @@ cppQueue u_queue_outer(sizeof(double), N_POLES_OUTER, IMPLEMENTATION, true);
 cppQueue e_queue_outer(sizeof(double), N_ZEROS_OUTER, IMPLEMENTATION, true);
 
 // Station 13
+
+//old values 
 
 /*
 const double a_coeffs_inner[26] = {
@@ -142,71 +156,73 @@ const double b_coeffs_inner[27] = {
   -0.000165534783335,
   0.000008696897701,
 }; //coefficients on the denominator of D
-*/
 
+*/
 //Station 13 NEW VALS
 
+
 const double a_coeffs_inner[28] = {
-  1.000000000000000,
-  -2.642984519096037,
-   2.601307725181655,
-  -1.141544162409170,
-   0.189288583548169,
-   0.010724609761245,
-  -0.011418194250985,
-   0.001054617475321,
-  -0.000940997242319,
-   0.002868655691917,
-  -0.002977515894495,
-   0.004687012816295,
-  -0.010736694376012,
-   0.006396086143370,
-  -0.000688115171175,
-  -0.001001359128670,
-  -0.000348345273954,
-  -0.000372973610895,
-  -0.000373568924833,
-  -0.000377039558912,
-  -0.000364635105492,
-  -0.000284448945049,
-  -0.000428392539048,
-  -0.000517384831868,
-   0.000394479950874,
-  -0.001510054228994,
-   0.000152469673089,
-  -0.000005839651830
+  -4.026428254903294,
+   6.615102778719837,
+  -3.848776243664719,
+   0.710992849531161,
+  -0.026098713933281,
+  -0.076766895707961,
+  -0.032117673986351,
+  -0.037584805262759,
+  -0.035427277731845,
+  -0.048539695165355,
+  -0.038653052836755,
+  -0.058875103918127,
+  -0.013649601539569,
+  -0.041897257773820,
+  -0.047793085824696,
+  -0.037449005293335,
+  -0.040744391231529,
+  -0.037140525695732,
+  -0.019809504930329,
+  -0.045348578533860,
+  -0.004087483841310,
+   0.017190840470117,
+  -0.575752490856133,
+   0.735821417199926,
+  -0.066809735046565,
+   0.001802185241076
 };
 
-const double b_coeffs_inner[28] = {
+const double b_coeffs_inner[27] = {
   1.000000000000000,
-  -2.642984519822081,
-   2.598897685486468,
-  -1.132514666826088,
-   0.183072460123669,
-   0.012587819900194,
-  -0.011076556564073,
-   0.001352800603362,
-  -0.000563738274154,
-   0.003232016187070,
-  -0.002615286732223,
-   0.005036983286262,
-  -0.010368673872481,
-   0.006750031950047,
-  -0.000282815515002,
-  -0.000650848029541,
-   0.000008349635870,
-  -0.000005412641509,
-  -0.000008011251553,
-  -0.000009545095555,
-   0.000026837948914,
-  -0.000020023397721,
-   0.000005878248294,
-  -0.000000255025587,
-  -0.000000190636187,
-   0.000000061208677,
-   0.000000001091938
+  -1.642943289402437,
+   0.958543702586135,
+  -0.183392300474898,
+   0.006145152798565,
+   0.016819238488557,
+   0.005401785553243,
+   0.006459883044782,
+   0.005519424286866,
+   0.008388977143563,
+   0.005412315647343,
+   0.010101272266585,
+  -0.000634153487359,
+   0.005763745149629,
+   0.005075116996116,
+   0.004073313010593,
+   0.003730392539580,
+   0.003355773034201,
+   0.002984144560218,
+   0.002607403901348,
+   0.002259101756533,
+   0.001905801372820,
+   0.001540585933827,
+   0.001198160184104,
+   0.001312221613138,
+  -0.000134326783812,
+   0.000003811504057,
 };
-// not sure if these are station-specific... pretty sure they aren't?
+
+
+// Attempt 1 -- this goes with the sampling time of 0.240s, and is Nov11_final_controller
+/*
 const double a_coeffs_outer[N_ZEROS_OUTER] = {
   -4.166665421620564,
   -1.028140433768777,
@@ -266,6 +282,142 @@ const double b_coeffs_outer[N_POLES_OUTER] = {
    0.063836130557479,
    0.032209001793042,
    0.008255309315977
+};
+*/
+
+//Attempt 2 -- this goes with the sampling time of 0.640s, and is found in D_outer_640ms
+/*
+const double a_coeffs_outer[N_ZEROS_OUTER+1] = {
+  -4.166654793589373,
+  14.068365115716837,
+ -19.321256368774783,
+  15.513836801305700,
+ -10.001154371353987,
+   6.414544226977990,
+  -4.220393642241348,
+   2.399910369517359,
+  -0.493257206150475,
+  -0.326364970921651,
+   0.188380771988638,
+   0.363137259155915,
+  -1.128505178690442,
+   0.878784232587488,
+  -0.559372244167000,
+   0.124493398797685,
+   2.072614593935477,
+  -2.894194203257097,
+   0.665577393827139,
+   0.724946341335340,
+  -0.172024917827348,
+  -0.054582389373170,
+  -0.494713274092662,
+   1.082573501127513,
+  -1.301566900197275,
+   0.930904938317440,
+  -0.327679350229599,
+   0.034577564930512,
+   0.004064702045338,
+  -0.021578018859176,
+   0.024327113040958,
+  -0.012008900856693,
+   0.004843711229285,
+  -0.000575296485224
+};
+
+const double b_coeffs_outer[N_POLES_OUTER+1]{
+  1.000000000000000,
+  -3.181734568189126,
+   4.546877301121634,
+  -4.301077150936717,
+   3.300588123971295,
+  -2.304951882891881,
+   1.536656252276429,
+  -0.975980856430829,
+   0.605012690384900,
+  -0.375132359403927,
+   0.215662871330010,
+  -0.118178414279350,
+   0.072017641744200,
+  -0.025945702906005,
+   0.027159470674311,
+  -0.014963454186095,
+  -0.002782407894749,
+  -0.023823229108753,
+   0.010388820754800,
+   0.022121399684165,
+  -0.005834077904810,
+  -0.009076358581666,
+  -0.000062914089976,
+   0.003728420563016,
+  -0.002789597797934,
+   0.001959214781972,
+   0.002546061866754,
+  -0.004184651992275,
+   0.000920918029411,
+   0.000275983018225,
+   0.000393565931044,
+   0.000166078984097,
+  -0.000006940521268,
+   0.000061021960348,
+  -0.000011257911414
+};
+
+*/
+
+const double a_coeffs_outer[N_ZEROS_OUTER+1] = {
+  -4.166666666512072,
+  -8.589736252233990,
+ -10.907581818230735,
+  -9.556799080620770,
+  -6.373786520195043,
+  -2.910562488552405,
+  -0.297136658630564,
+   1.260364829652884,
+   1.524420230596224,
+   0.890523451465900,
+   0.215265278027398,
+  -0.090934592604217,
+   0.332844412363310,
+   1.578427168250178,
+   3.107442116629638,
+   4.139334383344161,
+   3.900388775134775,
+   1.820607315855524,
+  -0.756490801244740,
+  -1.921459012447259,
+  -1.386499060518228,
+  -0.350843657941648,
+   0.494565600659102,
+   0.497352848118246,
+   0.206765460765875
+};
+const double b_coeffs_outer[N_POLES_OUTER+1]{
+   1.000000000000000,
+   2.285699882728168,
+   3.561435515964872,
+   4.278548895715130,
+   4.547295929678503,
+   4.437243672887059,
+   4.132107452186195,
+   3.692024999745091,
+   3.197796505539588,
+   2.700843796801034,
+   2.245749842241861,
+   1.832708938198274,
+   1.442325244112199,
+   1.054550126297804,
+   0.669723340809681,
+   0.315797129245805,
+   0.040185699124285,
+  -0.113769178467033,
+  -0.132620042483455,
+  -0.055346188615721,
+   0.039862473221423,
+   0.090171586140741,
+   0.084992922097811,
+   0.050666297242865,
+   0.018748264923441,
+   0.003468454512249
 };
 
 // Station 12
@@ -328,17 +480,24 @@ const double b_coeffs_inner[25] = {
 
 // ========== For Filtering ===============
 volatile int g_latestBalValue;
-const int MIN_BAL_READING = 300;
-const int MAX_BAL_READING = 900;
-const double FILTER_ALPHA_MOTOR = 0.2; 
-const double FILTER_ALPHA_BALL = 0.6;
+volatile bool g_new_sample_time;
+const int MIN_BAL_READING = 200;
+const int MAX_BAL_READING = 700;
+const double FILTER_ALPHA_MOTOR = 0.75; 
+const double FILTER_ALPHA_BALL = 0.05;
 double filtered_mot_raw;
 double filtered_bal_raw;
 
 // ========== For testing /input generation ==========
 // --- Autostepping --- 
+
+// --- Autostepping --- 
 float pos_mag[] = {0.10, 0.25, 0.10, 0.25, 0.10, 0.25, 0.10, 0.25, 0.10};
-int num_steps = sizeof(pos_mag) / sizeof(pos_mag[0]);
+float rad_mag[] = {0.0, -0.7, 0.7, -0.7, 0.7, -0.7, 0.7};
+
+float* autostep_array; 
+int num_steps;         
+
 int step_index = 0;
 bool autostep = true;
 
@@ -366,13 +525,13 @@ double trial_value = -1; //mode-dependent, eg. step magnitude
 volatile int trial_num = 1; // 1-indexed because matlab
 
 //=================== Potentiometer Calibrations ====
-// // station 13
-// const int motor_pot_min = 565;
-// const int motor_pot_max = 455;
+// // station 13 NEW
+const int motor_pot_min = 563;
+const int motor_pot_max = 455;
 
 // station 12
-const int motor_pot_min = 443;
-const int motor_pot_max = 336;
+//const int motor_pot_min = 443;
+//const int motor_pot_max = 336;
 
 const double motor_pot_slope = PI / (2.0 * (motor_pot_max - motor_pot_min));
 const double motor_pot_offset = PI / 4.0 - motor_pot_slope * motor_pot_max;
@@ -381,8 +540,8 @@ const double motor_pot_offset = PI / 4.0 - motor_pot_slope * motor_pot_max;
 double ball_pos_1 = 0.1; //meters
 double ball_pos_2 = 0.25; //meters
 //STATION 12 VALUES
-double ball_reading_1 = 395; //sensor output @ 0.1 m
-double ball_reading_2 = 545; //sensor output @ 0.25 m
+double ball_reading_1 = 412; //sensor output @ 0.1 m
+double ball_reading_2 = 564; //sensor output @ 0.25 m
 double ball_m = (ball_pos_2 - ball_pos_1) / (ball_reading_2 - ball_reading_1);
 double ball_b = ball_pos_1 - ball_m * ball_reading_1;
 
@@ -403,7 +562,7 @@ void startTest(float userInput){
   Serial.println("==============================================================================");
   if (input_mode == STEP_INPUT) {
     if(autostep){
-      g_target_pos = pos_mag[step_index];
+      g_target_pos = autostep_array[step_index];
       Serial.print("NEW TEST STARTED -> REFERENCE POSITION: ");
       Serial.print(g_target_pos, 4);
       Serial.println(" m");
@@ -421,7 +580,7 @@ void startTest(float userInput){
   else if (input_mode == INNER_LOOP_TEST) {
     if (autostep) {
       // Reuse pos_mag as theta steps (in radians)
-      g_target_pos = pos_mag[step_index];
+      g_target_pos = autostep_array[step_index];
       Serial.print("NEW TEST STARTED -> THETA STEP: ");
       Serial.print(g_target_pos, 4);
       Serial.println(" rad");
@@ -449,26 +608,42 @@ void startTest(float userInput){
 
 
 void endTest(){
-    Serial.println("==============================================================================");
-    Serial.println("Test complete.");
-    trial_num += 1;
-    currentState = WAIT_FOR_INPUT; //so any interrupts here are just passed
+  Serial.println("==============================================================================");
+  Serial.println("Test complete.");
+  trial_num += 1;
+  currentState = WAIT_FOR_INPUT; // Set state back to waiting
 
+  // FIX: Check for autostep first, regardless of mode
+  if (autostep) {
+    step_index++; // Increment the step
     
-    if (input_mode == STEP_INPUT){
-      if(autostep){
-        step_index++;
-        if (step_index < num_steps) {
-            Serial.println("Please wait for the next step to occur.");
-            startTest(-1);
-        } else {
-            Serial.println("\n You're finished!!! Returning to normal operation now");
-            autostep = false;
-        }
+    if (step_index < num_steps) {
+      // Check which mode we're in to print the right message
+      if (input_mode == STEP_INPUT || input_mode == INNER_LOOP_TEST) {
+        Serial.println("Please wait for the next automatic step to occur.");
+        startTest(-1); // Start the next test (userInput is ignored anyway)
       }
-      else{
+    } else {
+      // We finished all steps
+      Serial.println("\n You're finished!!! Returning to normal operation now");
+      autostep = false; // Turn off autostepping
+      step_index = 0; // Reset for next time
+      
+      // Print the correct prompt for manual input
+      if (input_mode == STEP_INPUT) {
         Serial.println("\nPlease enter a new step magnitude to run another test:");
+      } else if (input_mode == INNER_LOOP_TEST) {
+        Serial.println("\nPlease enter a new theta step to run another test:");
       }
+    }
+  } 
+  else {
+    // Autostep is off, just print the manual prompt for the current mode
+    if (input_mode == STEP_INPUT) {
+      Serial.println("\nPlease enter a new step magnitude to run another test:");
+    } else if (input_mode == INNER_LOOP_TEST) {
+      Serial.println("\nPlease enter a new theta step to run another test:");
+    }
   }
 }
 
@@ -499,6 +674,7 @@ void setup() {
   fillQueueWithZero(e_queue_inner, N_ZEROS_INNER);
   fillQueueWithZero(u_queue_outer, N_POLES_OUTER);
   fillQueueWithZero(e_queue_outer, N_ZEROS_OUTER);
+
   filtered_mot_raw = analogRead(MOT_PIN);
   filtered_bal_raw = analogRead(BAL_PIN);
 
@@ -507,6 +683,9 @@ void setup() {
   switch(input_mode){
     case STEP_INPUT: 
       Serial.println("Mode: STEP INPUT (Ball Position)");
+      autostep_array = pos_mag;
+      num_steps = sizeof(pos_mag) / sizeof(pos_mag[0]); // Get count for pos_mag
+
       if(autostep){
         Serial.println("(AUTOMATED LAB 3 STEPS)");
         Serial.println("\nPress any character and Enter to start the trial:");
@@ -517,6 +696,8 @@ void setup() {
       break;
 
     case INNER_LOOP_TEST:
+      autostep_array = rad_mag; 
+      num_steps = sizeof(rad_mag) / sizeof(rad_mag[0]);
       Serial.println("Mode: INNER LOOP TEST (theta_ref in radians)");
       if (autostep) {
         Serial.println("(AUTOMATED THETA STEPS)");
@@ -556,12 +737,15 @@ void loop() {
     }
   }
   //oversample at whatever rate this loop runs at, protect the value from being read while its being written
-  int newSample = analogRead(BAL_PIN);
-  if (newSample > MIN_BAL_READING && newSample < MAX_BAL_READING) {
-    float newAverage = (FILTER_ALPHA_BALL * (float)newSample) + ((1.0 - FILTER_ALPHA_BALL) * g_latestBalValue);
-    noInterrupts();
-    g_latestBalValue = newAverage;
-    interrupts();
+  if(g_new_sample_time){
+    int newSample = analogRead(BAL_PIN);
+    if (newSample > MIN_BAL_READING && newSample < MAX_BAL_READING) {
+      float newAverage = (FILTER_ALPHA_BALL * (float)newSample) + ((1.0 - FILTER_ALPHA_BALL) * g_latestBalValue);
+      noInterrupts();
+      g_latestBalValue = newAverage;
+      g_new_sample_time = false; 
+      interrupts();
+    }
   }
 }
 
@@ -596,7 +780,7 @@ double outer_ctrl(double y_ref, double y_current) {
     u_total += a_coeffs_outer[j] * peeker;
   }
 
-  double u_new = u_total / b_coeffs_inner[0];// Assume b0 is 1, but good practice
+  double u_new = u_total / b_coeffs_outer[0];// Assume b0 is 1, but good practice
   u_queue_outer.push(&u_new);
   return u_new;
 }
@@ -632,7 +816,7 @@ double inner_ctrl(double theta_ref, double theta_current) {
     u_total += a_coeffs_inner[j] * peeker;
   }
 
-  double u_new = u_total / b_coeffs_outer[0]; // Assume b0 is 1, but good practice
+  double u_new = u_total / b_coeffs_inner[0]; // Assume b0 is 1, but good practice
   u_queue_inner.push(&u_new);
   return u_new;
 }
@@ -697,6 +881,7 @@ void interval_control_code(void) {
     new_data.u_actual = U_comped;
 
     data_alarm = true;
+    g_new_sample_time = true; 
     i++;
 }
 
