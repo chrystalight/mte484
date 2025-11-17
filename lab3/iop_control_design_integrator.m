@@ -5,7 +5,7 @@ load 'poles_B.mat'
 
 attempt_number = 3; 
 load('new_plant_polesets.mat')
-poleset = prune_1.'
+poleset = prune_1.';
 resultsFile = 'integrator_T_360.mat';
 % set time step
 k_2 = 0.06091;
@@ -19,12 +19,12 @@ T_inner = 0.004; % The ISR sample time (T_INNER)
 %s_p = log(1-alpha) / T_inner;  (where log is natural log)
 a = -log(1 - alpha) / T_inner; 
 
-s = tf('s')
-P = (k_2*k_3)/(s*s)
+s = tf('s');
+P = (k_2*k_3)/(s*s);
 F_s = a / (s + a);            % Our 1st-order filter model
 P_filt = P * F_s;              % with the filter
 
-G_orig = c2d(P, T, 'zoh')
+G_orig = c2d(P, T, 'zoh');
 
 [num, den] = tfdata(G_orig, 'v');
 [r, p, k] = residuez(num, den);
@@ -70,12 +70,12 @@ qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
 %cs = [r(1)]
-cs = [k_2*k_3*0.5*T^2]
+cs = [k_2*k_3*0.5*T^2];
 if double_integrator_flag
     % coefficients include both c_n for 1/(z-1) and c_(n+1) for 1/(z-1)^2 for
     %       the pole at z=1
     %c_double_integrator = [r(2)];
-    c_double_integrator = [k_2*k_3*T^2]
+    c_double_integrator = [k_2*k_3*T^2];
     cs = [cs c_double_integrator];
 end     
 
@@ -105,7 +105,7 @@ end
 
 %% Poles Chosen in the Simple Pole Approximation of W[z]
 
-j = sqrt(-1);
+% j = sqrt(-1);
 realWPoles = [];
 complexWPoles = [generate_poles(total,rmax,center)];
 %complexWPoles = poleset;
@@ -145,7 +145,7 @@ for i=1:m
     end
 end
 
-gamma = zeros(n-nhat,m);
+gamma = zeros(n-nhat,m); %#ok<*PREALL>
 if double_integrator_flag
     gamma = zeros(n+1-nhat,m);
 end
@@ -299,32 +299,32 @@ Objective = norm(step_ru*w, 2);
 Constraints = [A*[w;x;xhat] == b];
 
 % input saturation constraint
-Constraints = [Constraints,
+Constraints = [Constraints, ...
               max(step_ru*w) <= max_U];
-Constraints = [Constraints,
+Constraints = [Constraints, ...
               min(step_ru*w) >= -max_U];       
 % Constraints = [Constraints, ...
 %                norm(step_ru*w, inf) <= 0.7];        
 
 % steady state constraint
 if ~controller_integrator_flag
-    Constraints = [Constraints,
+    Constraints = [Constraints, ...
                    steadyState*[x;xhat]+0.15==0];
 else
-    Constraints = [Constraints,
+    Constraints = [Constraints, ...
                    steadyState*[x;xhat]+[1;0;0]*0.15==[0;0;0]];
 end
 
 
 % overshoot constraint
-Constraints = [Constraints,
+Constraints = [Constraints, ...
                 max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
 % settling time constraint
 jhat = floor(max_ts/T);
 
-Constraints = [Constraints,
+Constraints = [Constraints, ...
                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
-               1.02*(-steadyState(1,:)*[x;xhat]), % <-- FIXED
+               1.02*(-steadyState(1,:)*[x;xhat]), ... % <-- FIXED
                min(step_ry(jhat:end,:)*[x;xhat]) >= ...
                0.98*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
 
@@ -370,7 +370,7 @@ ylabel('u[k]');
 log_scale_flag = 1;
 
 % heat map
-heatmap = figure(3)
+heatmap = figure(3);
 t = linspace(0,2*pi);
 plot(cos(t),sin(t),'k--');
 hold on;
@@ -384,7 +384,7 @@ end
 hold off;
 colormap(jet);
 colorbar;
-saveas(heatmap, "Integrator_attempt_"+attempt_number+"_polemap.png")
+saveas(heatmap, "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_polemap.png")
 
 %% Recover the transfer functions
 
@@ -448,15 +448,15 @@ opt = stepDataOptions('StepAmplitude', 0.15);
 %opt.Bias = -0.7;
 %opt.Amplitude = 1.4;
 
-y_out = figure(1)
-yname = "Integ_attempt_"+attempt_number+"_Y.png";
+y_out = figure(1);
+yname = "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_Y.png";
 hold on;
 step(T_ry, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
 saveas(y_out, yname);
 hold off;
 
-u_out = figure(2)
-uname = "Integ_attempt_"+attempt_number+"_U.png";
+u_out = figure(2);
+uname = "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_U.png";
 hold on;
 step(T_ru, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
 saveas(u_out, uname);
@@ -486,15 +486,15 @@ Metric_ObjectiveValue = value(Objective);
 
 % Define metric names (will be column headers)
 metricNames = {
-    'Constraint_Max_U', 
-    'Constraint_Max_OS',
-    'Constraint_Max_TS',
-    'Constraint_ObjectiveValue',
-    'Constraint_NumPoles',
-    'RESULT_Ess',
-    'RESULT_UMax',
-    'RESULT_OS',
-    'RESULT_SettlingTime',
+    'Constraint_Max_U', ...
+    'Constraint_Max_OS', ...
+    'Constraint_Max_TS', ...
+    'Constraint_ObjectiveValue', ...
+    'Constraint_NumPoles', ...
+    'RESULT_Ess', ...
+    'RESULT_UMax', ...
+    'RESULT_OS', ...
+    'RESULT_SettlingTime', ...
     'RESULT_UTotalVariation',
     };
 
@@ -606,9 +606,12 @@ save(resultsFile, 'resultsTable', 'tf_results');
 
 
 % 7. Also update the LaTeX export to use the new table orientation
-table2latex(resultsTable);
-fprintf('\nResults table saved to %s\n', resultsFile);
-
+try
+    table2latex(resultsTable);
+    fprintf('Results table saved to %s\n', resultsFile);
+catch
+    fprintf('Results table not saved, skipping. Is table2latex available?\n')
+end
 
 
 
