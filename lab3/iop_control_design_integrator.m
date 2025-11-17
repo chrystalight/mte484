@@ -12,6 +12,9 @@ k_2 = 0.06091;
 k_3 = -4.25;
 T = 0.360; 
 
+s = tf('s');
+P = (k_2*k_3)/(s*s);
+
 %%%%%%%%%%% ---- ADDING IN THE HEAVY EMA FILTERING ----
 alpha = 0.05;    % The 'FILTER_ALPHA_BALL' from the C++ code
 T_inner = 0.004; % The ISR sample time (T_INNER)
@@ -19,10 +22,9 @@ T_inner = 0.004; % The ISR sample time (T_INNER)
 %s_p = log(1-alpha) / T_inner;  (where log is natural log)
 a = -log(1 - alpha) / T_inner; 
 
-s = tf('s');
-P = (k_2*k_3)/(s*s);
-F_s = a / (s + a);            % Our 1st-order filter model
-P_filt = P * F_s;              % with the filter
+% F_s = a / (s + a);            % Our 1st-order filter model
+% P_filt = P * F_s;              % with the filter
+%%%%%%%%% End of EMA stuff
 
 G_orig = c2d(P, T, 'zoh');
 
