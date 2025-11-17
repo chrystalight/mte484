@@ -1,32 +1,43 @@
-clear
-clc
-close all
+%clear
+%clc
+%close all
 load 'poles_B.mat'
 
-attempt_number = 14; 
+attempt_number = 3; 
 load('new_plant_polesets.mat')
-poleset = prune_6.'
+poleset = prune_1.'
+resultsFile = 'integrator_T_360.mat';
 % set time step
 k_2 = 0.06091;
-k_3 = -4.0162;
-T = 0.24; %%WE HAVE TO PICK A NEW T VALUE
+k_3 = -4.25;
+T = 0.360; 
+
+%%%%%%%%%%% ---- ADDING IN THE HEAVY EMA FILTERING ----
+alpha = 0.05;    % The 'FILTER_ALPHA_BALL' from the C++ code
+T_inner = 0.004; % The ISR sample time (T_INNER)
+%F(s) = a / (s + a)
+%s_p = log(1-alpha) / T_inner;  (where log is natural log)
+a = -log(1 - alpha) / T_inner; 
 
 s = tf('s')
 P = (k_2*k_3)/(s*s)
+F_s = a / (s + a);            % Our 1st-order filter model
+P_filt = P * F_s;              % with the filter
+
 G_orig = c2d(P, T, 'zoh')
 
 [num, den] = tfdata(G_orig, 'v');
 [r, p, k] = residuez(num, den);
 
 %Pole Picking Parameters
-total = 100;
+total = 200;
 rmax = 0.9;
 center = 0;
 
 %specs
 ref_amplitude = 0.15; 
-max_U = 0.625;
-max_OS = 1.425;
+max_U = 0.7;
+max_OS = 1.45;
 max_ts = 7; 
 max_ess = 0; 
 
@@ -34,9 +45,11 @@ max_ess = 0;
 double_integrator_flag = 1;
 
 % should the controller have an integrator?
-controller_integrator_flag = 0;
+controller_integrator_flag = 1;
 
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
+%%k_2 = 0.06091;
+%%k_3 = -4.0162;
 
 stableRealPlantPoles = [];
 stableComplexPlantPoles = [];
@@ -81,6 +94,8 @@ if double_integrator_flag
     G = G + c_double_integrator/(z-1)^2;
 end
 
+%G = G_justin
+%G_orig = G_justin
 % plant_error = norm(G_orig - G);
 % disp(['Norm of (G_orig - G_check) = ', num2str(plant_error)]);
 % if plant_error > 1e-10
@@ -92,8 +107,8 @@ end
 
 j = sqrt(-1);
 realWPoles = [];
-%complexWPoles = [generate_poles(total,rmax,center)];
-complexWPoles = poleset;
+complexWPoles = [generate_poles(total,rmax,center)];
+%complexWPoles = poleset;
 % for checking the integrator in the controller:
 %complexWPoles = poles_B';
 ps = [realWPoles complexWPoles];
@@ -179,7 +194,7 @@ b = [zeros(m+size(beta,1),1);
 %% Determination of step response matrices
 
 % time horizon
-K = 100;
+K = 300;
 
 step_ry = zeros(K,m+nhat);
 
@@ -269,8 +284,8 @@ end
 %Objective = max(step_ru*w);
 %Objective = min(max(step_ru*w));
 Objective_num = 3;
-%Objective = norm(step_ru*w, 2); 
-Objective = min(norm(step_ru*w))
+Objective = norm(step_ru*w, 2); 
+%Objective = min(norm(step_ru*w))
 
 %objective_num legend:
 %1 --> %Objective = max(step_ru*w);
@@ -300,17 +315,31 @@ else
                    steadyState*[x;xhat]+[1;0;0]*0.15==[0;0;0]];
 end
 
+
 % overshoot constraint
 Constraints = [Constraints,
-               max(step_ry*[x;xhat]) <= max_OS*(-steadyState*[x;xhat])];
-
+                max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
 % settling time constraint
 jhat = floor(max_ts/T);
+
 Constraints = [Constraints,
                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
-               1.02*(-steadyState*[x;xhat]),
+               1.02*(-steadyState(1,:)*[x;xhat]), % <-- FIXED
                min(step_ry(jhat:end,:)*[x;xhat]) >= ...
-               0.98*(-steadyState*[x;xhat])];
+               0.98*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
+
+%%BELOW IS BEFORE I ADDED THE INTEGRATOR CASE
+% % overshoot constraint
+% Constraints = [Constraints,
+%                max(step_ry*[x;xhat]) <= max_OS*(-steadyState*[x;xhat])];
+% 
+% % settling time constraint
+% jhat = floor(max_ts/T);
+% Constraints = [Constraints,
+%                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
+%                1.02*(-steadyState*[x;xhat]),
+%                min(step_ry(jhat:end,:)*[x;xhat]) >= ...
+%                0.98*(-steadyState*[x;xhat])];
 
 %% Solving the optimization problem
 
@@ -355,7 +384,7 @@ end
 hold off;
 colormap(jet);
 colorbar;
-saveas(heatmap, "attempt_"+attempt_number+"_polemap.png")
+saveas(heatmap, "Integrator_attempt_"+attempt_number+"_polemap.png")
 
 %% Recover the transfer functions
 
@@ -420,14 +449,14 @@ opt = stepDataOptions('StepAmplitude', 0.15);
 %opt.Amplitude = 1.4;
 
 y_out = figure(1)
-yname = "attempt_"+attempt_number+"_Y.png";
+yname = "Integ_attempt_"+attempt_number+"_Y.png";
 hold on;
 step(T_ry, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
 saveas(y_out, yname);
 hold off;
 
 u_out = figure(2)
-uname = "attempt_"+attempt_number+"_U.png";
+uname = "Integ_attempt_"+attempt_number+"_U.png";
 hold on;
 step(T_ru, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
 saveas(u_out, uname);
@@ -486,7 +515,6 @@ allValues = [
 % --- NEW LOGIC: Load, Update, Save (Rows = Attempts, Cols = Metrics) ---
 
 % 1. Define the file name and the new ROW name
-resultsFile = 'new_plant_optimization_results.mat';
 newRowName = sprintf('Attempt_%d', attempt_number); % Use char ' (not string ")
 
 % 2. Create a new table for THIS attempt's data
