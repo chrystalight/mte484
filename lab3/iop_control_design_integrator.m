@@ -40,7 +40,7 @@ center = 0;
 ref_amplitude = 0.15; 
 max_U = 0.7;
 max_OS = 1.45;
-max_ts = 7; 
+max_ts = 70; 
 max_ess = 0; 
 
 % does the plant have a double integrator?
@@ -72,12 +72,12 @@ qs = [stablePlantPoles unstablePlantPoles];
 
 % coefficents go in order of the poles
 %cs = [r(1)]
-cs = [k_2*k_3*0.5*T^2];
+cs = [k_2*k_3];
 if double_integrator_flag
     % coefficients include both c_n for 1/(z-1) and c_(n+1) for 1/(z-1)^2 for
     %       the pole at z=1
     %c_double_integrator = [r(2)];
-    c_double_integrator = [k_2*k_3*T^2];
+    c_double_integrator = [k_2*k_3];
     cs = [cs c_double_integrator];
 end     
 
@@ -88,18 +88,30 @@ ncomplex = length(stableComplexPlantPoles);
 
 % verify that your plant is correct!
 z = tf('z',T);
+% syms z
 G = 0;
 for k=1:n
-    G = G + cs(k)/(z-qs(k));
+    % G = G + cs(k)/(z-qs(k));
+    eit = (exp(qs(k) * T));
+    G = G + (cs(k)/qs(k)) * (eit -1)/(z - eit);
+    % disp("Added " + string((cs(k)/qs(k)) * (eit -1)/(z - eit)))
 end
 if double_integrator_flag
-    G = G + c_double_integrator/(z-1)^2;
+    eit = (exp(1 * T));
+    % remove the term above
+    G = G - ((cs(k)/qs(k)) * (eit -1)/(z - eit));
+    % disp("Added " + string((c_double_integrator*(1/2)*T^2)/(z-1)))
+
+    % then add the special-case integrator term
+    G = G + (c_double_integrator*(1/2)*T^2)/(z-1) + (c_double_integrator*T^2)/(z-1)^2;
+    % disp("Subtracted " + string((cs(k)/qs(k)) * (eit -1)/(z - eit)))
+    % disp("Added " + string((c_double_integrator*T^2)/(z-1)^2))
 end
 
-%G = G_justin
-%G_orig = G_justin
+% G = G_justin
+% G_orig = G_justin
 % plant_error = norm(G_orig - G);
-% disp(['Norm of (G_orig - G_check) = ', num2str(plant_error)]);
+% disp(['Norm of (G_orig - G) = ', num2str(plant_error)]);
 % if plant_error > 1e-10
 %     disp('WARNING: Plant mismatch! G and G_check are not the same.');
 %     disp('The optimization is based on a different plant than the verification.');
@@ -301,34 +313,34 @@ Objective = norm(step_ru*w, 2);
 Constraints = [A*[w;x;xhat] == b];
 
 % input saturation constraint
-Constraints = [Constraints, ...
-              max(step_ru*w) <= max_U];
-Constraints = [Constraints, ...
-              min(step_ru*w) >= -max_U];       
+% Constraints = [Constraints, ...
+%               max(step_ru*w) <= max_U];
+% Constraints = [Constraints, ...
+%               min(step_ru*w) >= -max_U];       
 % Constraints = [Constraints, ...
 %                norm(step_ru*w, inf) <= 0.7];        
 
 % steady state constraint
-if ~controller_integrator_flag
-    Constraints = [Constraints, ...
-                   steadyState*[x;xhat]+0.15==0];
-else
-    Constraints = [Constraints, ...
-                   steadyState*[x;xhat]+[1;0;0]*0.15==[0;0;0]];
-end
+% if ~controller_integrator_flag
+%     Constraints = [Constraints, ...
+%                    -steadyState*[x;xhat]==0.15];
+% else
+%     Constraints = [Constraints, ...
+%                    -steadyState*[x;xhat]+[1;0;0]*0.15==[0;0;0]];
+% end
 
 
-% overshoot constraint
-Constraints = [Constraints, ...
-                max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
-% settling time constraint
-jhat = floor(max_ts/T);
-
-Constraints = [Constraints, ...
-               max(step_ry(jhat:end,:)*[x;xhat]) <= ...
-               1.02*(-steadyState(1,:)*[x;xhat]), ... % <-- FIXED
-               min(step_ry(jhat:end,:)*[x;xhat]) >= ...
-               0.98*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
+% % overshoot constraint
+% Constraints = [Constraints, ...
+%                 max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
+% % settling time constraint
+% jhat = floor(max_ts/T);
+% 
+% Constraints = [Constraints, ...
+%                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
+%                1.02*(-steadyState(1,:)*[x;xhat]), ... % <-- FIXED
+%                min(step_ry(jhat:end,:)*[x;xhat]) >= ...
+%                0.98*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
 
 %%BELOW IS BEFORE I ADDED THE INTEGRATOR CASE
 % % overshoot constraint
@@ -618,7 +630,7 @@ end
 
 
 function D = recoverD(W, X, T, tol)
-%RECOVERD  
+%RECOVER D  
 [zW,pW,kW] = zpkdata(W,'v');
 [zX,pX,kX] = zpkdata(X,'v');
 
