@@ -1,12 +1,11 @@
 %clear
 %clc
 %close all
-load 'poles_B.mat'
 
 attempt_number = 3; 
 load('new_plant_polesets.mat')
-poleset = prune_1.';
 resultsFile = 'integrator_T_360.mat';
+
 % set time step
 k_2 = 0.06091;
 k_3 = -4.25;
@@ -21,7 +20,6 @@ T_inner = 0.004; % The ISR sample time (T_INNER)
 %F(s) = a / (s + a)
 %s_p = log(1-alpha) / T_inner;  (where log is natural log)
 a = -log(1 - alpha) / T_inner; 
-
 % F_s = a / (s + a);            % Our 1st-order filter model
 % P_filt = P * F_s;              % with the filter
 %%%%%%%%% End of EMA stuff
@@ -29,18 +27,20 @@ a = -log(1 - alpha) / T_inner;
 G_orig = c2d(P, T, 'zoh');
 
 [num, den] = tfdata(G_orig, 'v');
-[r, p, k] = residuez(num, den);
+%[r, p, k] = residuez(num, den);
 
 %Pole Picking Parameters
 total = 200;
 rmax = 0.9;
 center = 0;
+poleset = generate_poles(total,rmax,center)
+%poleset = prune_1.';
 
 %specs
 ref_amplitude = 0.15; 
 max_U = 0.7;
 max_OS = 1.45;
-max_ts = 7; 
+max_ts = 20; 
 max_ess = 0; 
 
 % does the plant have a double integrator?
@@ -50,8 +50,6 @@ double_integrator_flag = 1;
 controller_integrator_flag = 1;
 
 %% Plant Poles and Coefficients in its Partial Fraction Decomposition
-%%k_2 = 0.06091;
-%%k_3 = -4.0162;
 
 stableRealPlantPoles = [];
 stableComplexPlantPoles = [];
@@ -109,8 +107,7 @@ end
 
 % j = sqrt(-1);
 realWPoles = [];
-complexWPoles = [generate_poles(total,rmax,center)];
-%complexWPoles = poleset;
+complexWPoles = poleset;
 % for checking the integrator in the controller:
 %complexWPoles = poles_B';
 ps = [realWPoles complexWPoles];
@@ -304,7 +301,8 @@ Constraints = [A*[w;x;xhat] == b];
 Constraints = [Constraints, ...
               max(step_ru*w) <= max_U];
 Constraints = [Constraints, ...
-              min(step_ru*w) >= -max_U];       
+              min(step_ru*w) >= -max_U];   
+
 % Constraints = [Constraints, ...
 %                norm(step_ru*w, inf) <= 0.7];        
 
@@ -320,15 +318,15 @@ end
 
 % overshoot constraint
 Constraints = [Constraints, ...
-                max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
+                max(step_ry*[x;xhat]) <= max_OS*(-steadyState(1,:)*[x;xhat])]; % 
 % settling time constraint
 jhat = floor(max_ts/T);
 
 Constraints = [Constraints, ...
                max(step_ry(jhat:end,:)*[x;xhat]) <= ...
-               1.02*(-steadyState(1,:)*[x;xhat]), ... % <-- FIXED
+               1.02*(-steadyState(1,:)*[x;xhat]), ... 
                min(step_ry(jhat:end,:)*[x;xhat]) >= ...
-               0.98*(-steadyState(1,:)*[x;xhat])]; % <-- FIXED
+               0.98*(-steadyState(1,:)*[x;xhat])]; 
 
 %%BELOW IS BEFORE I ADDED THE INTEGRATOR CASE
 % % overshoot constraint
@@ -386,7 +384,7 @@ end
 hold off;
 colormap(jet);
 colorbar;
-saveas(heatmap, "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_polemap.png")
+%saveas(heatmap, "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_polemap.png")
 
 %% Recover the transfer functions
 
@@ -454,14 +452,14 @@ y_out = figure(1);
 yname = "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_Y.png";
 hold on;
 step(T_ry, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
-saveas(y_out, yname);
+%saveas(y_out, yname);
 hold off;
 
 u_out = figure(2);
 uname = "Controller_Trial_Figures/Integ_attempt_"+attempt_number+"_U.png";
 hold on;
 step(T_ru, opt, 'g--'); % <-- Made the line a dashed green 'g--' to see it better
-saveas(u_out, uname);
+%saveas(u_out, uname);
 hold off;
 %% --- Generate Performance Metrics  ---
 disp('Calculating performance metrics...');
