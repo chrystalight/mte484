@@ -363,7 +363,7 @@ const double b_coeffs_outer[N_POLES_OUTER+1]{
 };
 
 */
-
+//Attempt 3 -- this goes with T = 0.360s, no integrator
 const double a_coeffs_outer[N_ZEROS_OUTER+1] = {
   -4.166666666512072,
   -8.589736252233990,
