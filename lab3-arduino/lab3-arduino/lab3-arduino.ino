@@ -12,25 +12,23 @@
 #define N_ZEROS_INNER 25
 #define N_POLES_INNER 26
 
+//working(?) integrator attempt on station 13
+#define N_ZEROES_OUTER 91
+#define N_POLES_OUTER 91
+
 const int STATION_NUM = 13; 
 
 //CTRL attempt 1, November 11, with 0.240s sampling time
 //#define N_ZEROS_OUTER 27
 //#define N_POLES_OUTER 28
 
-
 //CTRL attempt with 0.400s sampling time
 //#define N_ZEROS_OUTER 33
 //#define N_POLES_OUTER 34
 
 //attempt w/ 360ms sampling
-
-#define N_ZEROS_OUTER 24
-#define N_POLES_OUTER 25
-
-//working(?) integrator attempt
-#define N_ZEROES_OUTER 91
-#define N_POLES_OUTER 91
+// #define N_ZEROS_OUTER 24
+// #define N_POLES_OUTER 25
 
 //for STATION 12:
 //#define N_ZEROS_INNER 24
