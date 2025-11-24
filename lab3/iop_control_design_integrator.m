@@ -2,10 +2,10 @@
 %clc
 %close all
 
-attempt_number = 7; 
+attempt_number = 1; 
 % load('new_plant_polesets.mat')
 load('working_poleset.mat');
-resultsFile = 'integrator_T_360.mat';
+resultsFile = 'FINAL_integrator_T_360.mat';
 
 % set time step
 k_2 = 0.06091;
@@ -38,8 +38,8 @@ center = 0;
 % POLE_THRESH = 100;
 % this_poleSet = sortrows(myPoleSet(1:POLE_THRESH), 1, "ascend");
 % poleset = complex(this_poleSet(:, 2), this_poleSet(:, 3));
-poleset = complex(working_poleset(:, 2), working_poleset(:, 3));
-%poleset = prune_1.';
+%poleset = complex(working_poleset(:, 2), working_poleset(:, 3));
+poleset = slim_3.';
 
 %specs
 ref_amplitude = 0.15; 
