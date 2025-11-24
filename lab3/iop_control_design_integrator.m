@@ -2,8 +2,9 @@
 %clc
 %close all
 
-attempt_number = 3; 
-load('new_plant_polesets.mat')
+attempt_number = 6; 
+% load('new_plant_polesets.mat')
+load('working_poleset.mat');
 resultsFile = 'integrator_T_360.mat';
 
 % set time step
@@ -33,13 +34,15 @@ G_orig = c2d(P, T, 'zoh');
 total = 200;
 rmax = 0.965;
 center = 0;
-poleset = generate_poles(total,rmax,center)
+% % poleset = generate_poles(total,rmax,center)
+% poleset = complex(myPoleSet(:, 2), myPoleSet(:, 3));
+poleset = complex(working_poleset(:, 2), working_poleset(:, 3));
 %poleset = prune_1.';
 
 %specs
 ref_amplitude = 0.15; 
-max_U = 0.7;
-max_OS = 1.45;
+max_U = 0.65;
+max_OS = 1.42;
 max_ts = 7; 
 max_ess = 0; 
 
