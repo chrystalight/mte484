@@ -46,8 +46,10 @@ const int OUTER_DIV = T_OUTER/T_INNER; //T_outer/T_innter
 static int outer_div_ctr = 0;     
 
 
-const float stiction_offset_neg = -0.54;
-const float stiction_offset_pos = 0.08;
+const float motor_stiction_offset_neg = -0.54;
+const float motor_stiction_offset_pos = 0.08;
+const float beam_stiction_offset_neg = -0.24;
+const float beam_stiction_offset_pos = 0.23; //may need to change per-station
 const int max_T = 15000;                          // Test duration in MS
 const float saturation_limit = 0.7;         // The limit for the reference signal in radians
 
@@ -782,6 +784,13 @@ double outer_ctrl(double y_ref, double y_current) {
 
   double u_new = u_total / b_coeffs_outer[0];// Assume b0 is 1, but good practice
   u_queue_outer.push(&u_new);
+  
+  // if (u_new > 0.01) { // Apply stiction compensation if phi angle is not tiny
+  //   u_new = max(u_new, beam_stiction_offset_pos);
+  // }
+  // else if (u_new < -0.01) {
+  //   u_new = min(u_new, beam_stiction_offset_neg);
+  // }
   return u_new;
 }
 
@@ -865,9 +874,9 @@ void interval_control_code(void) {
     double U = inner_ctrl(constrained_theta_ref, current_angle);
 
     double U_comped = U;
-      if (abs(U) > 0.01) { // Apply compensation if voltage is not tiny
-      U_comped = U + (U > 0 ? stiction_offset_pos : stiction_offset_neg);
-    }
+    //   if (abs(U) > 0.01) { // Apply compensation if voltage is not tiny
+    //   U_comped = U + (U > 0 ? motor_stiction_offset_pos : motor_stiction_offset_neg);
+    // }
 
     setMotorVoltage(U_comped);  
   // ---- log data ----
