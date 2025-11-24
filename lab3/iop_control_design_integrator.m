@@ -31,7 +31,7 @@ G_orig = c2d(P, T, 'zoh');
 
 %Pole Picking Parameters
 total = 200;
-rmax = 0.9;
+rmax = 0.965;
 center = 0;
 poleset = generate_poles(total,rmax,center)
 %poleset = prune_1.';
@@ -40,7 +40,7 @@ poleset = generate_poles(total,rmax,center)
 ref_amplitude = 0.15; 
 max_U = 0.7;
 max_OS = 1.45;
-max_ts = 20; 
+max_ts = 7; 
 max_ess = 0; 
 
 % does the plant have a double integrator?
