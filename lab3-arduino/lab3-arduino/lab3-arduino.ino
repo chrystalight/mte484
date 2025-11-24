@@ -13,7 +13,7 @@
 #define N_POLES_INNER 26
 
 //working(?) integrator attempt on station 13
-#define N_ZEROES_OUTER 91
+#define N_ZEROS_OUTER 91
 #define N_POLES_OUTER 91
 
 const int STATION_NUM = 13; 
@@ -574,7 +574,7 @@ const double a_coeffs_outer[91] = {
   -0000.000174221877,
    0000.000047330848,
   -0000.000008097574
-}
+};
 
 const double b_coeffs_outer[91] = {
    0.010000000000000,
@@ -668,7 +668,7 @@ const double b_coeffs_outer[91] = {
   -000.0000012194932,
    000.0000003866297,
   -000.0000001358198,
-}
+};
 
 
 // ========== For Filtering ===============
