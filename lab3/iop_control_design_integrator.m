@@ -45,7 +45,7 @@ poleset = slim_3.';
 ref_amplitude = 0.15; 
 max_U = 0.69;
 max_OS = 1.44;
-max_ts = 6.75; 
+max_ts = 6.5; 
 max_ess = 0; 
 
 % does the plant have a double integrator?
