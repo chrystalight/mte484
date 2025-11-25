@@ -2,7 +2,7 @@
 %clc
 %close all
 
-attempt_number = 6; 
+attempt_number = 7; 
 % load('new_plant_polesets.mat')
 load('working_poleset.mat');
 resultsFile = 'integrator_T_360.mat';
@@ -35,15 +35,17 @@ total = 200;
 rmax = 0.965;
 center = 0;
 % % poleset = generate_poles(total,rmax,center)
-% poleset = complex(myPoleSet(:, 2), myPoleSet(:, 3));
+% POLE_THRESH = 100;
+% this_poleSet = sortrows(myPoleSet(1:POLE_THRESH), 1, "ascend");
+% poleset = complex(this_poleSet(:, 2), this_poleSet(:, 3));
 poleset = complex(working_poleset(:, 2), working_poleset(:, 3));
 %poleset = prune_1.';
 
 %specs
 ref_amplitude = 0.15; 
-max_U = 0.65;
-max_OS = 1.42;
-max_ts = 7; 
+max_U = 0.69;
+max_OS = 1.44;
+max_ts = 6.75; 
 max_ess = 0; 
 
 % does the plant have a double integrator?
